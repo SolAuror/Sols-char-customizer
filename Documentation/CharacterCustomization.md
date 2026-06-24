@@ -28,5 +28,15 @@ Each morph row explicitly stores its logical identifier and UI references. Runti
 - `Tools > Character Customization > Validate Morph Demo` checks the menu, character morphs, scene wiring, and UI input references without rebuilding assets.
 - Persistent save data, colour customization, and game-specific progression remain outside the current iteration.
 
+## Validation Checkpoint
+The tabbed menu and reset iteration was validated in Unity 6000.3.9f1 on 24 June 2026. The editor validator, Play Mode acceptance checks, and runtime and editor builds passed. The checks covered all 38 authored rows, tab filtering, independent scroll areas, character switching, recipe isolation, current-character reset, and blendshape application across every matching renderer.
+
+## Next Steps
+1. Replace the hardcoded MPFB catalogue and male/female assumptions with serialized morph profiles and character-variant bindings while preserving stable logical identifiers.
+2. Separate reusable runtime and editor code from the MPFB demo, then add package metadata, assembly definitions, and a `Samples~` demo.
+3. Add Edit Mode tests for value clamping, bipolar weights, recipe isolation, missing bindings, and reset, followed by Play Mode coverage for switching and prefab UI binding.
+4. Document installation and public APIs, declare dependencies, audit MPFB redistribution rights, and add licence, version, and changelog files.
+5. Choose a recipe serialization format only when persistence becomes the active iteration. Colour customization and game progression remain deferred until separately approved.
+
 ## Unresolved Questions
 - What recipe serialization format should be used when persistence is introduced?
