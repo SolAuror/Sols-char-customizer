@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace Sol.CharacterCustomization.Editor
 {
@@ -15,6 +17,10 @@ namespace Sol.CharacterCustomization.Editor
         private const string DemoScenePath = "Assets/CharCustomization/Scenes/DemoScene.unity";
         private const string MenuPrefabPath = "Assets/CharCustomization/Prefabs/CharacterMorphMenu.prefab";
         private const string InputActionsPath = "Assets/CharCustomization/Scripts/InputSystem_Actions.inputactions";
+        private static readonly string[] ExpectedGroups =
+        {
+            "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
+        };
         private static readonly HashSet<string> AllowedMenuOverridePaths = new HashSet<string>(StringComparer.Ordinal)
         {
             "controller",
@@ -81,7 +87,7 @@ namespace Sol.CharacterCustomization.Editor
 
             CharacterMorphSliderRow[] rows = menuPrefab.GetComponentsInChildren<CharacterMorphSliderRow>(true);
             CharacterMorphSliderRow[] authored = rows.Where(row => !string.IsNullOrEmpty(row.MorphId)).ToArray();
-            CharacterMorphSliderRow[] templates = rows.Where(row => string.IsNullOrEmpty(row.MorphId) && !row.gameObject.activeSelf).ToArray();
+            CharacterMorphSliderRow[] templates = rows.Where(row => string.IsNullOrEmpty(row.MorphId)).ToArray();
             string[] duplicates = authored.GroupBy(row => row.MorphId, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1).Select(group => group.Key).ToArray();
             string[] missing = CharacterMorphCatalog.Definitions
@@ -89,6 +95,7 @@ namespace Sol.CharacterCustomization.Editor
                 .Select(definition => definition.Id).ToArray();
 
             if (authored.Length != CharacterMorphCatalog.Definitions.Count || templates.Length != 1 ||
+                templates[0].gameObject.activeSelf ||
                 duplicates.Length > 0 || missing.Length > 0)
             {
                 throw new InvalidOperationException(
@@ -96,16 +103,111 @@ namespace Sol.CharacterCustomization.Editor
                     $"duplicates: {string.Join(", ", duplicates)}, missing: {string.Join(", ", missing)}");
             }
 
+            CharacterMorphSliderRow[] visibleRows = authored.Where(row => row.gameObject.activeSelf).ToArray();
+            if (visibleRows.Length != 10 || visibleRows.Any(row =>
+                    !CharacterMorphCatalog.TryGet(row.MorphId, out CharacterMorphDefinition definition) ||
+                    definition.Group != "Body"))
+            {
+                throw new InvalidOperationException("Body must be the initial tab with exactly its 10 authored rows visible.");
+            }
+
+            string[] authoredOrder = authored.OrderBy(row => row.transform.GetSiblingIndex())
+                .Select(row => row.MorphId).ToArray();
+            string[] catalogueOrder = CharacterMorphCatalog.Definitions.Select(definition => definition.Id).ToArray();
+            if (!authoredOrder.SequenceEqual(catalogueOrder, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException("Authored morph rows are not in catalogue order.");
+            }
+
+            TMP_Text[] remainingHeaders = menuPrefab.GetComponentsInChildren<TMP_Text>(true)
+                .Where(text => text.gameObject.name.EndsWith(" Header", StringComparison.Ordinal)).ToArray();
+            if (remainingHeaders.Length > 0)
+            {
+                throw new InvalidOperationException(
+                    $"The menu still contains header objects: {string.Join(", ", remainingHeaders.Select(header => header.name))}.");
+            }
+
             var serializedMenu = new SerializedObject(menu);
             foreach (string propertyName in new[]
                      {
-                         "content", "femaleButton", "maleButton", "femaleButtonImage", "maleButtonImage", "sliderRowTemplate"
+                         "content", "femaleButton", "maleButton", "femaleButtonImage", "maleButtonImage", "sliderRowTemplate",
+                         "tabRailScrollRect", "tabRailContent", "mainSliderScrollRect", "resetButton"
                      })
             {
                 if (serializedMenu.FindProperty(propertyName).objectReferenceValue == null)
                 {
                     throw new InvalidOperationException($"Menu reference '{propertyName}' is not assigned.");
                 }
+            }
+
+            ValidateTabs(menu, serializedMenu);
+            ValidateScrollRect((ScrollRect)serializedMenu.FindProperty("tabRailScrollRect").objectReferenceValue, "tab rail");
+            ValidateScrollRect((ScrollRect)serializedMenu.FindProperty("mainSliderScrollRect").objectReferenceValue, "slider panel");
+
+            RectTransform tabRailContent =
+                (RectTransform)serializedMenu.FindProperty("tabRailContent").objectReferenceValue;
+            if (tabRailContent.GetComponent<VerticalLayoutGroup>() == null ||
+                tabRailContent.GetComponent<ContentSizeFitter>() == null)
+            {
+                throw new InvalidOperationException("The tab rail content must be layout driven.");
+            }
+
+            Button resetButton = (Button)serializedMenu.FindProperty("resetButton").objectReferenceValue;
+            if (!resetButton.gameObject.activeSelf || resetButton.transform.parent == null ||
+                resetButton.transform.parent.Find("Female Button") == null ||
+                resetButton.transform.parent.Find("Male Button") == null)
+            {
+                throw new InvalidOperationException("The Reset button must be active beside the female and male controls.");
+            }
+        }
+
+        private static void ValidateTabs(CharacterMorphDemoUI menu, SerializedObject serializedMenu)
+        {
+            SerializedProperty tabsProperty = serializedMenu.FindProperty("tabButtons");
+            var tabs = new List<CharacterMorphTabButton>();
+            for (int index = 0; index < tabsProperty.arraySize; index++)
+            {
+                CharacterMorphTabButton tab =
+                    tabsProperty.GetArrayElementAtIndex(index).objectReferenceValue as CharacterMorphTabButton;
+                if (tab != null)
+                {
+                    tabs.Add(tab);
+                }
+            }
+
+            string[] duplicateGroups = tabs.GroupBy(tab => tab.GroupId, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1).Select(group => group.Key).ToArray();
+            string[] missingGroups = ExpectedGroups.Where(group => tabs.All(tab => tab.GroupId != group)).ToArray();
+            string[] unexpectedGroups = tabs.Where(tab => !ExpectedGroups.Contains(tab.GroupId, StringComparer.Ordinal))
+                .Select(tab => tab.GroupId).ToArray();
+
+            if (tabsProperty.arraySize != ExpectedGroups.Length || tabs.Count != ExpectedGroups.Length ||
+                tabs.Any(tab => !tab.IsConfigured || tab.Label.text != tab.GroupId) ||
+                duplicateGroups.Length > 0 || missingGroups.Length > 0 ||
+                unexpectedGroups.Length > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Invalid morph tabs. Configured: {tabs.Count}/{ExpectedGroups.Length}, " +
+                    $"duplicates: {string.Join(", ", duplicateGroups)}, missing: {string.Join(", ", missingGroups)}, " +
+                    $"unexpected: {string.Join(", ", unexpectedGroups)}.");
+            }
+
+            RectTransform tabRailContent =
+                (RectTransform)serializedMenu.FindProperty("tabRailContent").objectReferenceValue;
+            if (tabs.Any(tab => tab.transform.parent != tabRailContent))
+            {
+                throw new InvalidOperationException("Every morph tab must be a direct child of the tab rail content.");
+            }
+        }
+
+        private static void ValidateScrollRect(ScrollRect scrollRect, string label)
+        {
+            if (scrollRect == null || !scrollRect.vertical || scrollRect.horizontal || scrollRect.viewport == null ||
+                scrollRect.content == null ||
+                (scrollRect.viewport.GetComponent<RectMask2D>() == null &&
+                 scrollRect.viewport.GetComponent<Mask>() == null))
+            {
+                throw new InvalidOperationException($"The {label} ScrollRect wiring is incomplete.");
             }
         }
 
@@ -128,8 +230,13 @@ namespace Sol.CharacterCustomization.Editor
 
             ValidateInputModule(inputModule, expectedActions);
             ValidateMenuOverrides(menu);
-            ValidateMorphRoot(FindRoot(scene, "sk_f_human"), CharacterSex.Female);
-            ValidateMorphRoot(FindRoot(scene, "sk_m_human"), CharacterSex.Male);
+            var serializedController = new SerializedObject(controller);
+            ValidateMorphRoot(
+                serializedController.FindProperty("femaleRoot").objectReferenceValue as GameObject,
+                CharacterSex.Female);
+            ValidateMorphRoot(
+                serializedController.FindProperty("maleRoot").objectReferenceValue as GameObject,
+                CharacterSex.Male);
         }
 
         private static void ValidateInputModule(InputSystemUIInputModule module, InputActionAsset expectedActions)
@@ -204,11 +311,6 @@ namespace Sol.CharacterCustomization.Editor
         {
             return renderers.Any(renderer =>
                 renderer.sharedMesh != null && renderer.sharedMesh.GetBlendShapeIndex(shapeName) >= 0);
-        }
-
-        private static GameObject FindRoot(Scene scene, string name)
-        {
-            return scene.GetRootGameObjects().FirstOrDefault(root => root.name == name);
         }
 
         private static T FindFirst<T>(Scene scene) where T : Component

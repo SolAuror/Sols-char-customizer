@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace Sol.CharacterCustomization
@@ -14,9 +15,19 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Image femaleButtonImage;
         [SerializeField] private Image maleButtonImage;
         [SerializeField] private CharacterMorphSliderRow sliderRowTemplate;
+        [SerializeField] private ScrollRect tabRailScrollRect;
+        [SerializeField] private RectTransform tabRailContent;
+        [SerializeField] private ScrollRect mainSliderScrollRect;
+        [SerializeField] private Button resetButton;
+        [SerializeField] private CharacterMorphTabButton[] tabButtons = Array.Empty<CharacterMorphTabButton>();
+        [SerializeField] private Color selectedTabColor = new(0.82f, 0.73f, 0.55f, 1f);
+        [SerializeField] private Color inactiveTabColor = new(0.27f, 0.27f, 0.27f, 1f);
 
         private readonly Dictionary<string, CharacterMorphSliderRow> rows = new(StringComparer.Ordinal);
+        private readonly Dictionary<CharacterMorphTabButton, UnityAction> tabListeners = new();
         private bool initialized;
+        private bool listenersRegistered;
+        private string selectedGroup = "Body";
 
         private static readonly Color AccentColor = new(0.82f, 0.73f, 0.55f, 1f);
         private static readonly Color InactiveColor = new(0.27f, 0.27f, 0.27f, 1f);
@@ -26,17 +37,22 @@ namespace Sol.CharacterCustomization
             Initialize();
         }
 
+        private void OnEnable()
+        {
+            if (initialized)
+            {
+                RegisterListeners();
+            }
+        }
+
+        private void OnDisable()
+        {
+            UnregisterListeners();
+        }
+
         private void OnDestroy()
         {
-            if (femaleButton != null)
-            {
-                femaleButton.onClick.RemoveListener(SelectFemale);
-            }
-
-            if (maleButton != null)
-            {
-                maleButton.onClick.RemoveListener(SelectMale);
-            }
+            UnregisterListeners();
 
             foreach (CharacterMorphSliderRow row in rows.Values)
             {
@@ -66,8 +82,8 @@ namespace Sol.CharacterCustomization
             CharacterMorphSliderRow row = Instantiate(sliderRowTemplate, content);
             row.name = morphId;
             row.SetMorphId(morphId);
-            row.gameObject.SetActive(true);
-            PlaceAtEndOfGroup(row.transform, definition.Group);
+            row.gameObject.SetActive(definition.Group == selectedGroup);
+            PlaceInCatalogOrder(row);
 
             if (!row.Bind(controller, definition))
             {
@@ -94,7 +110,10 @@ namespace Sol.CharacterCustomization
 
             foreach (CharacterMorphSliderRow row in rows.Values)
             {
-                row.Refresh();
+                if (row.gameObject.activeSelf)
+                {
+                    row.Refresh();
+                }
             }
         }
 
@@ -112,7 +131,7 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            initialized = true;
+            selectedGroup = "Body";
             CacheAuthoredRows();
 
             foreach (CharacterMorphDefinition definition in controller.Definitions)
@@ -123,9 +142,10 @@ namespace Sol.CharacterCustomization
                 }
             }
 
-            femaleButton.onClick.AddListener(SelectFemale);
-            maleButton.onClick.AddListener(SelectMale);
+            initialized = true;
+            RegisterListeners();
             controller.SetSex(CharacterSex.Female);
+            ApplySelectedGroup(false);
             RefreshPanel();
         }
 
@@ -136,7 +156,14 @@ namespace Sol.CharacterCustomization
                    femaleButton != null &&
                    maleButton != null &&
                    femaleButtonImage != null &&
-                   maleButtonImage != null;
+                   maleButtonImage != null &&
+                   sliderRowTemplate != null &&
+                   tabRailScrollRect != null &&
+                   tabRailContent != null &&
+                   mainSliderScrollRect != null &&
+                   resetButton != null &&
+                   tabButtons != null &&
+                   tabButtons.Length == 8;
         }
 
         private void CacheAuthoredRows()
@@ -198,39 +225,152 @@ namespace Sol.CharacterCustomization
             RefreshPanel();
         }
 
-        private void PlaceAtEndOfGroup(Transform row, string group)
+        private void ResetCurrentCharacter()
         {
-            int insertionIndex = content.childCount;
-            bool foundHeader = false;
+            controller.ResetCurrentCharacter();
+            RefreshPanel();
+        }
+
+        private void SelectTab(string groupId)
+        {
+            if (!IsKnownGroup(groupId))
+            {
+                Debug.LogWarning($"Cannot select unknown morph group '{groupId}'.", this);
+                return;
+            }
+
+            selectedGroup = groupId;
+            ApplySelectedGroup(true);
+        }
+
+        private void ApplySelectedGroup(bool resetScroll)
+        {
+            foreach (KeyValuePair<string, CharacterMorphSliderRow> pair in rows)
+            {
+                bool visible = CharacterMorphCatalog.TryGet(pair.Key, out CharacterMorphDefinition definition) &&
+                               definition.Group == selectedGroup;
+                pair.Value.gameObject.SetActive(visible);
+                if (visible)
+                {
+                    pair.Value.Refresh();
+                }
+            }
+
+            foreach (CharacterMorphTabButton tab in tabButtons)
+            {
+                if (tab != null)
+                {
+                    tab.SetSelected(tab.GroupId == selectedGroup, selectedTabColor, inactiveTabColor);
+                }
+            }
+
+            if (resetScroll)
+            {
+                Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+                mainSliderScrollRect.StopMovement();
+                mainSliderScrollRect.verticalNormalizedPosition = 1f;
+            }
+        }
+
+        private void PlaceInCatalogOrder(CharacterMorphSliderRow row)
+        {
+            int rowOrder = GetCatalogOrder(row.MorphId);
+            int insertionIndex = sliderRowTemplate != null ? sliderRowTemplate.transform.GetSiblingIndex() : content.childCount;
 
             for (int index = 0; index < content.childCount; index++)
             {
                 Transform child = content.GetChild(index);
-                if (child == row)
+                if (child == row.transform || !child.TryGetComponent(out CharacterMorphSliderRow existingRow) ||
+                    existingRow == sliderRowTemplate)
                 {
                     continue;
                 }
 
-                if (child.name == group + " Header")
-                {
-                    foundHeader = true;
-                    insertionIndex = index + 1;
-                    continue;
-                }
-
-                if (foundHeader && child.name.EndsWith(" Header", StringComparison.Ordinal))
+                if (GetCatalogOrder(existingRow.MorphId) > rowOrder)
                 {
                     insertionIndex = index;
                     break;
                 }
+            }
 
-                if (foundHeader)
+            row.transform.SetSiblingIndex(insertionIndex);
+        }
+
+        private void RegisterListeners()
+        {
+            if (listenersRegistered)
+            {
+                return;
+            }
+
+            femaleButton.onClick.AddListener(SelectFemale);
+            maleButton.onClick.AddListener(SelectMale);
+            resetButton.onClick.AddListener(ResetCurrentCharacter);
+
+            foreach (CharacterMorphTabButton tab in tabButtons)
+            {
+                if (tab == null || !tab.IsConfigured || tabListeners.ContainsKey(tab))
                 {
-                    insertionIndex = index + 1;
+                    continue;
+                }
+
+                CharacterMorphTabButton capturedTab = tab;
+                UnityAction listener = () => SelectTab(capturedTab.GroupId);
+                capturedTab.Button.onClick.AddListener(listener);
+                tabListeners.Add(capturedTab, listener);
+            }
+
+            listenersRegistered = true;
+        }
+
+        private void UnregisterListeners()
+        {
+            if (!listenersRegistered)
+            {
+                return;
+            }
+
+            femaleButton.onClick.RemoveListener(SelectFemale);
+            maleButton.onClick.RemoveListener(SelectMale);
+            resetButton.onClick.RemoveListener(ResetCurrentCharacter);
+
+            foreach (KeyValuePair<CharacterMorphTabButton, UnityAction> pair in tabListeners)
+            {
+                if (pair.Key != null && pair.Key.Button != null)
+                {
+                    pair.Key.Button.onClick.RemoveListener(pair.Value);
                 }
             }
 
-            row.SetSiblingIndex(insertionIndex);
+            tabListeners.Clear();
+            listenersRegistered = false;
+        }
+
+        private static bool IsKnownGroup(string groupId)
+        {
+            foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
+            {
+                if (definition.Group == groupId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int GetCatalogOrder(string morphId)
+        {
+            for (int index = 0; index < CharacterMorphCatalog.Definitions.Count; index++)
+            {
+                if (CharacterMorphCatalog.Definitions[index].Id == morphId)
+                {
+                    return index;
+                }
+            }
+
+            return int.MaxValue;
         }
     }
 }
