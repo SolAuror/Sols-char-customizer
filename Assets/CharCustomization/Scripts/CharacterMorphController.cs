@@ -15,7 +15,11 @@ namespace Sol.CharacterCustomization
         private bool initialized;
 
         public CharacterSex ActiveSex => activeSex;
+        public Transform ActiveCharacterRoot => activeSex == CharacterSex.Female
+            ? femaleRoot != null ? femaleRoot.transform : null
+            : maleRoot != null ? maleRoot.transform : null;
         public IReadOnlyList<CharacterMorphDefinition> Definitions => CharacterMorphCatalog.Definitions;
+        public IReadOnlyList<StatGrowthDefinition> StatGrowthDefinitions => CharacterStatGrowthCatalog.Definitions;
 
         private void Awake()
         {
@@ -61,6 +65,72 @@ namespace Sol.CharacterCustomization
             return recipes[activeSex].TryGetValue(morphId, out float value) ? value : 0f;
         }
 
+        public bool SavePreset(CharacterMorphPreset preset)
+        {
+            Initialize();
+            if (preset == null)
+            {
+                Debug.LogWarning("Cannot save a null character morph preset.", this);
+                return false;
+            }
+
+            preset.Overwrite(activeSex, CharacterMorphCatalog.Definitions, GetMorph);
+
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(preset);
+            UnityEditor.AssetDatabase.SaveAssetIfDirty(preset);
+#endif
+
+            return true;
+        }
+
+        public bool LoadPreset(CharacterMorphPreset preset)
+        {
+            Initialize();
+            if (preset == null)
+            {
+                Debug.LogWarning("Cannot load a null character morph preset.", this);
+                return false;
+            }
+
+            if (!preset.HasValidIdentifiers(out string error))
+            {
+                Debug.LogWarning($"Cannot load character morph preset '{preset.name}'. {error}", preset);
+                return false;
+            }
+
+            foreach (CharacterMorphPresetValue presetValue in preset.Values)
+            {
+                if (!CharacterMorphCatalog.TryGet(presetValue.MorphId, out _))
+                {
+                    Debug.LogWarning(
+                        $"Preset '{preset.name}' contains unknown morph '{presetValue.MorphId}', which was ignored.",
+                        preset);
+                }
+            }
+
+            SetSex(preset.Sex);
+            foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
+            {
+                float value = preset.TryGetValue(definition.Id, out float savedValue) ? savedValue : 0f;
+                SetMorph(definition.Id, value);
+            }
+
+            return true;
+        }
+
+        public void SetStatGrowth(string statId, float normalizedValue)
+        {
+            if (string.IsNullOrWhiteSpace(statId) ||
+                !CharacterStatGrowthCatalog.TryGet(statId, out StatGrowthDefinition growthDefinition))
+            {
+                Debug.LogWarning($"Unknown character growth stat '{statId}'.", this);
+                return;
+            }
+
+            SetMorph(growthDefinition.MorphId, growthDefinition.Evaluate(normalizedValue));
+        }
+
         public void ResetCurrentCharacter()
         {
             Initialize();
@@ -70,6 +140,37 @@ namespace Sol.CharacterCustomization
                 recipe[definition.Id] = 0f;
                 ApplyMorph(activeSex, definition, 0f);
             }
+        }
+
+        public bool ResetGroup(string groupId)
+        {
+            Initialize();
+            if (string.IsNullOrWhiteSpace(groupId))
+            {
+                Debug.LogWarning("Cannot reset an empty character morph group.", this);
+                return false;
+            }
+
+            bool foundGroup = false;
+            Dictionary<string, float> recipe = recipes[activeSex];
+            foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
+            {
+                if (!string.Equals(definition.Group, groupId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foundGroup = true;
+                recipe[definition.Id] = 0f;
+                ApplyMorph(activeSex, definition, 0f);
+            }
+
+            if (!foundGroup)
+            {
+                Debug.LogWarning($"Unknown character morph group '{groupId}'.", this);
+            }
+
+            return foundGroup;
         }
 
         public bool IsMorphAvailable(string morphId)
@@ -124,7 +225,7 @@ namespace Sol.CharacterCustomization
             {
                 string positiveName = definition.GetPositiveShape(sex);
                 string negativeName = definition.GetNegativeShape(sex);
-                var binding = new MorphBinding(definition.IsBipolar);
+                var binding = new MorphBinding(definition.RequiresNegativeShape);
 
                 foreach (SkinnedMeshRenderer renderer in renderers)
                 {
@@ -151,7 +252,7 @@ namespace Sol.CharacterCustomization
                 result.Add(definition.Id, binding);
                 if (!binding.IsComplete)
                 {
-                    string expected = definition.IsBipolar
+                    string expected = definition.RequiresNegativeShape
                         ? $"'{negativeName}' and '{positiveName}'"
                         : $"'{positiveName}'";
                     Debug.LogWarning($"{sex} morph '{definition.Id}' is unavailable. Expected {expected}.", root);
@@ -182,8 +283,7 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            float positiveWeight = Mathf.Max(0f, value) * 100f;
-            float negativeWeight = definition.IsBipolar ? Mathf.Max(0f, -value) * 100f : 0f;
+            definition.CalculateWeights(value, out float positiveWeight, out float negativeWeight);
 
             foreach (BlendShapeTarget target in binding.Targets)
             {

@@ -16,10 +16,12 @@ namespace Sol.CharacterCustomization.Editor
     {
         private const string DemoScenePath = "Assets/CharCustomization/Scenes/DemoScene.unity";
         private const string MenuPrefabPath = "Assets/CharCustomization/Prefabs/CharacterMorphMenu.prefab";
+        private const string DemoPresetPath = "Assets/CharCustomization/Presets/DemoPreset.asset";
+        private const string PresetLibraryPath = "Assets/CharCustomization/Presets/PresetLibrary.asset";
         private const string InputActionsPath = "Assets/CharCustomization/Scripts/InputSystem_Actions.inputactions";
         private static readonly string[] ExpectedGroups =
         {
-            "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
+            "Presets", "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
         };
         private static readonly HashSet<string> AllowedMenuOverridePaths = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -45,7 +47,17 @@ namespace Sol.CharacterCustomization.Editor
                 throw new InvalidOperationException($"Missing menu prefab at '{MenuPrefabPath}'.");
             }
 
-            ValidateMenu(menuPrefab);
+            CharacterMorphPreset demoPreset = AssetDatabase.LoadAssetAtPath<CharacterMorphPreset>(DemoPresetPath);
+            CharacterMorphPresetLibrary presetLibrary =
+                AssetDatabase.LoadAssetAtPath<CharacterMorphPresetLibrary>(PresetLibraryPath);
+            if (demoPreset == null || presetLibrary == null)
+            {
+                throw new InvalidOperationException("The demo preset or preset library is missing.");
+            }
+
+            ValidateMenu(menuPrefab, presetLibrary);
+            ValidatePresetLibrary(presetLibrary, demoPreset);
+            ValidateStatGrowthDefinitions();
             SceneSetup[] previousSetup = EditorSceneManager.GetSceneManagerSetup();
             bool canRestoreSetup = previousSetup.Any(setup => setup.isLoaded && setup.isActive);
             try
@@ -77,7 +89,7 @@ namespace Sol.CharacterCustomization.Editor
             }
         }
 
-        private static void ValidateMenu(GameObject menuPrefab)
+        private static void ValidateMenu(GameObject menuPrefab, CharacterMorphPresetLibrary presetLibrary)
         {
             CharacterMorphDemoUI menu = menuPrefab.GetComponent<CharacterMorphDemoUI>();
             if (menu == null)
@@ -131,7 +143,9 @@ namespace Sol.CharacterCustomization.Editor
             foreach (string propertyName in new[]
                      {
                          "content", "femaleButton", "maleButton", "femaleButtonImage", "maleButtonImage", "sliderRowTemplate",
-                         "tabRailScrollRect", "tabRailContent", "mainSliderScrollRect", "resetButton"
+                         "tabRailScrollRect", "tabRailContent", "mainSliderScrollRect", "presetLibrary", "presetPanel",
+                         "presetNameInput", "presetDropdown", "savePresetButton", "loadPresetButton",
+                         "resetAllButton", "resetGroupButton", "resetGroupButtonLabel"
                      })
             {
                 if (serializedMenu.FindProperty(propertyName).objectReferenceValue == null)
@@ -152,12 +166,80 @@ namespace Sol.CharacterCustomization.Editor
                 throw new InvalidOperationException("The tab rail content must be layout driven.");
             }
 
-            Button resetButton = (Button)serializedMenu.FindProperty("resetButton").objectReferenceValue;
-            if (!resetButton.gameObject.activeSelf || resetButton.transform.parent == null ||
-                resetButton.transform.parent.Find("Female Button") == null ||
-                resetButton.transform.parent.Find("Male Button") == null)
+            CharacterMorphPresetLibrary assignedLibrary =
+                (CharacterMorphPresetLibrary)serializedMenu.FindProperty("presetLibrary").objectReferenceValue;
+            GameObject presetPanel =
+                (GameObject)serializedMenu.FindProperty("presetPanel").objectReferenceValue;
+            TMP_InputField nameInput =
+                (TMP_InputField)serializedMenu.FindProperty("presetNameInput").objectReferenceValue;
+            TMP_Dropdown dropdown =
+                (TMP_Dropdown)serializedMenu.FindProperty("presetDropdown").objectReferenceValue;
+            Button savePresetButton =
+                (Button)serializedMenu.FindProperty("savePresetButton").objectReferenceValue;
+            Button loadPresetButton =
+                (Button)serializedMenu.FindProperty("loadPresetButton").objectReferenceValue;
+            Button resetAllButton =
+                (Button)serializedMenu.FindProperty("resetAllButton").objectReferenceValue;
+            Button resetGroupButton =
+                (Button)serializedMenu.FindProperty("resetGroupButton").objectReferenceValue;
+            ScrollRect sliderScroll =
+                (ScrollRect)serializedMenu.FindProperty("mainSliderScrollRect").objectReferenceValue;
+
+            if (assignedLibrary != presetLibrary || presetPanel.activeSelf ||
+                nameInput.transform.parent != presetPanel.transform ||
+                dropdown.transform.parent != presetPanel.transform ||
+                !savePresetButton.transform.IsChildOf(presetPanel.transform) ||
+                !loadPresetButton.transform.IsChildOf(presetPanel.transform) ||
+                !resetAllButton.transform.IsChildOf(presetPanel.transform))
             {
-                throw new InvalidOperationException("The Reset button must be active beside the female and male controls.");
+                throw new InvalidOperationException(
+                    "The inactive Preset Panel must contain its name, dropdown, Save, Load, and Reset All controls.");
+            }
+
+            if (!resetGroupButton.gameObject.activeSelf || resetGroupButton.transform.parent != sliderScroll.transform.parent ||
+                resetGroupButton.transform.IsChildOf(sliderScroll.transform))
+            {
+                throw new InvalidOperationException(
+                    "Reset Tab must remain fixed outside the morph ScrollRect.");
+            }
+        }
+
+        private static void ValidatePresetLibrary(
+            CharacterMorphPresetLibrary library,
+            CharacterMorphPreset demoPreset)
+        {
+            CharacterMorphPreset[] presets = library.Presets.Where(preset => preset != null).ToArray();
+            if (presets.Length == 0 || !presets.Contains(demoPreset) ||
+                presets.Select(preset => preset.DisplayName).Distinct(StringComparer.OrdinalIgnoreCase).Count() != presets.Length)
+            {
+                throw new InvalidOperationException(
+                    "The preset library must contain the demo preset and unique preset names.");
+            }
+
+            foreach (CharacterMorphPreset preset in presets)
+            {
+                ValidatePreset(preset);
+            }
+        }
+
+        private static void ValidatePreset(CharacterMorphPreset preset)
+        {
+            if (!Enum.IsDefined(typeof(CharacterSex), preset.Sex) ||
+                preset.Values.Count != CharacterMorphCatalog.Definitions.Count)
+            {
+                throw new InvalidOperationException("The demo preset has an invalid sex or morph count.");
+            }
+
+            for (int index = 0; index < CharacterMorphCatalog.Definitions.Count; index++)
+            {
+                CharacterMorphDefinition definition = CharacterMorphCatalog.Definitions[index];
+                CharacterMorphPresetValue presetValue = preset.Values[index];
+                if (!string.Equals(presetValue.MorphId, definition.Id, StringComparison.Ordinal) ||
+                    presetValue.Value < definition.MinimumValue || presetValue.Value > 1f)
+                {
+                    throw new InvalidOperationException(
+                        $"Demo preset entry {index} must be catalogue-ordered and within the range for '{definition.Id}'.");
+                }
             }
         }
 
@@ -183,6 +265,7 @@ namespace Sol.CharacterCustomization.Editor
 
             if (tabsProperty.arraySize != ExpectedGroups.Length || tabs.Count != ExpectedGroups.Length ||
                 tabs.Any(tab => !tab.IsConfigured || tab.Label.text != tab.GroupId) ||
+                !tabs.Select(tab => tab.GroupId).SequenceEqual(ExpectedGroups, StringComparer.Ordinal) ||
                 duplicateGroups.Length > 0 || missingGroups.Length > 0 ||
                 unexpectedGroups.Length > 0)
             {
@@ -198,6 +281,11 @@ namespace Sol.CharacterCustomization.Editor
             {
                 throw new InvalidOperationException("Every morph tab must be a direct child of the tab rail content.");
             }
+
+            if (tabs[0].transform.GetSiblingIndex() >= tabs[1].transform.GetSiblingIndex())
+            {
+                throw new InvalidOperationException("The Presets tab must be authored above Body.");
+            }
         }
 
         private static void ValidateScrollRect(ScrollRect scrollRect, string label)
@@ -208,6 +296,33 @@ namespace Sol.CharacterCustomization.Editor
                  scrollRect.viewport.GetComponent<Mask>() == null))
             {
                 throw new InvalidOperationException($"The {label} ScrollRect wiring is incomplete.");
+            }
+        }
+
+        private static void ValidateStatGrowthDefinitions()
+        {
+            IReadOnlyList<StatGrowthDefinition> growthDefinitions = CharacterStatGrowthCatalog.Definitions;
+            string[] requiredIds = { "muscle", "body_fat" };
+            string[] configuredIds = growthDefinitions.Select(definition => definition.Id).ToArray();
+            if (configuredIds.Distinct(StringComparer.Ordinal).Count() != growthDefinitions.Count ||
+                requiredIds.Any(requiredId => !configuredIds.Contains(requiredId, StringComparer.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "The stat-growth catalogue must contain unique muscle and body-fat definitions.");
+            }
+
+            foreach (StatGrowthDefinition growthDefinition in growthDefinitions)
+            {
+                if (!CharacterMorphCatalog.TryGet(
+                        growthDefinition.MorphId,
+                        out CharacterMorphDefinition morphDefinition) ||
+                    growthDefinition.MinimumMorphValue < morphDefinition.MinimumValue ||
+                    growthDefinition.MaximumMorphValue > 1f ||
+                    growthDefinition.MinimumMorphValue > growthDefinition.MaximumMorphValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Stat growth '{growthDefinition.Id}' has an invalid morph mapping or value range.");
+                }
             }
         }
 
@@ -299,7 +414,8 @@ namespace Sol.CharacterCustomization.Editor
             foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
             {
                 bool hasPositive = HasBlendShape(renderers, definition.GetPositiveShape(sex));
-                bool hasNegative = !definition.IsBipolar || HasBlendShape(renderers, definition.GetNegativeShape(sex));
+                bool hasNegative = !definition.RequiresNegativeShape ||
+                                   HasBlendShape(renderers, definition.GetNegativeShape(sex));
                 if (!hasPositive || !hasNegative)
                 {
                     throw new InvalidOperationException($"{sex} is missing morph '{definition.Id}'.");

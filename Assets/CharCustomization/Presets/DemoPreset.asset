@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 759410971a0241b28df12d6b701f7eb1, type: 3}
+  m_Name: DemoPreset
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterMorphPreset
+  displayName: Demo Preset
+  sex: 0
+  values:
+  - morphId: body.muscle
+    value: 0
+  - morphId: body.weight
+    value: -0.75871813
+  - morphId: body.height
+    value: 0
+  - morphId: body.breast
+    value: 0
+  - morphId: body.glutes
+    value: -0.76641047
+  - morphId: body.shoulder_width
+    value: -1
+  - morphId: body.chest_width
+    value: -1
+  - morphId: body.waist
+    value: -1
+  - morphId: body.hips
+    value: 0
+  - morphId: head.weight
+    value: 0
+  - morphId: head.jaw.bite
+    value: 0
+  - morphId: head.jaw.shape
+    value: 0
+  - morphId: head.chin.position
+    value: 0
+  - morphId: head.chin.point
+    value: 0
+  - morphId: head.chin.width
+    value: 0
+  - morphId: head.mouth.width
+    value: 0
+  - morphId: head.mouth.fullness
+    value: 0
+  - morphId: head.mouth.forward
+    value: 0
+  - morphId: head.mouth.height
+    value: 0
+  - morphId: head.nose.width
+    value: 0
+  - morphId: head.nose.curve
+    value: 0
+  - morphId: head.nose.depth
+    value: 0
+  - morphId: head.nose.forward
+    value: 0
+  - morphId: head.nose.septum_angle
+    value: 0
+  - morphId: head.cheekbone.width
+    value: 0
+  - morphId: head.cheek.fullness
+    value: 0
+  - morphId: head.eyes.bags
+    value: 0
+  - morphId: head.eyes.openness
+    value: 0
+  - morphId: head.eyes.height
+    value: 0
+  - morphId: head.eyes.distance
+    value: 0
+  - morphId: head.eyes.size
+    value: 0
+  - morphId: head.eyes.slant
+    value: 0
+  - morphId: head.eyebrows.height
+    value: 0
+  - morphId: head.eyebrows.angle
+    value: 0
+  - morphId: head.neck.width
+    value: 0
+  - morphId: head.ears.shape
+    value: 0
+  - morphId: head.ears.size
+    value: 0
+  - morphId: head.ears.rotation
+    value: 0

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -18,13 +19,22 @@ namespace Sol.CharacterCustomization
         [SerializeField] private ScrollRect tabRailScrollRect;
         [SerializeField] private RectTransform tabRailContent;
         [SerializeField] private ScrollRect mainSliderScrollRect;
-        [SerializeField] private Button resetButton;
+        [SerializeField] private CharacterMorphPresetLibrary presetLibrary;
+        [SerializeField] private GameObject presetPanel;
+        [SerializeField] private TMP_InputField presetNameInput;
+        [SerializeField] private TMP_Dropdown presetDropdown;
+        [SerializeField] private Button savePresetButton;
+        [SerializeField] private Button loadPresetButton;
+        [SerializeField] private Button resetAllButton;
+        [SerializeField] private Button resetGroupButton;
+        [SerializeField] private TMP_Text resetGroupButtonLabel;
         [SerializeField] private CharacterMorphTabButton[] tabButtons = Array.Empty<CharacterMorphTabButton>();
         [SerializeField] private Color selectedTabColor = new(0.82f, 0.73f, 0.55f, 1f);
         [SerializeField] private Color inactiveTabColor = new(0.27f, 0.27f, 0.27f, 1f);
 
         private readonly Dictionary<string, CharacterMorphSliderRow> rows = new(StringComparer.Ordinal);
         private readonly Dictionary<CharacterMorphTabButton, UnityAction> tabListeners = new();
+        private readonly List<CharacterMorphPreset> availablePresets = new();
         private bool initialized;
         private bool listenersRegistered;
         private string selectedGroup = "Body";
@@ -143,6 +153,7 @@ namespace Sol.CharacterCustomization
             }
 
             initialized = true;
+            RefreshPresetOptions();
             RegisterListeners();
             controller.SetSex(CharacterSex.Female);
             ApplySelectedGroup(false);
@@ -161,9 +172,17 @@ namespace Sol.CharacterCustomization
                    tabRailScrollRect != null &&
                    tabRailContent != null &&
                    mainSliderScrollRect != null &&
-                   resetButton != null &&
+                   presetLibrary != null &&
+                   presetPanel != null &&
+                   presetNameInput != null &&
+                   presetDropdown != null &&
+                   savePresetButton != null &&
+                   loadPresetButton != null &&
+                   resetAllButton != null &&
+                   resetGroupButton != null &&
+                   resetGroupButtonLabel != null &&
                    tabButtons != null &&
-                   tabButtons.Length == 8;
+                   tabButtons.Length == 9;
         }
 
         private void CacheAuthoredRows()
@@ -225,10 +244,91 @@ namespace Sol.CharacterCustomization
             RefreshPanel();
         }
 
-        private void ResetCurrentCharacter()
+        private void ResetAll()
         {
             controller.ResetCurrentCharacter();
             RefreshPanel();
+        }
+
+        private void ResetSelectedGroup()
+        {
+            if (controller.ResetGroup(selectedGroup))
+            {
+                RefreshPanel();
+            }
+        }
+
+        private void SavePreset()
+        {
+            string presetName = presetNameInput.text.Trim();
+            if (string.IsNullOrEmpty(presetName))
+            {
+                Debug.LogWarning("Enter a preset name before saving.", this);
+                return;
+            }
+
+            CharacterMorphPreset preset = presetLibrary.GetOrCreate(presetName);
+            if (preset != null && controller.SavePreset(preset))
+            {
+                presetLibrary.MarkDirtyAndSave();
+                RefreshPresetOptions(preset);
+            }
+        }
+
+        private void LoadPreset()
+        {
+            int selectedIndex = presetDropdown.value;
+            if (selectedIndex < 0 || selectedIndex >= availablePresets.Count)
+            {
+                Debug.LogWarning("Select a character morph preset before loading.", this);
+                return;
+            }
+
+            CharacterMorphPreset preset = availablePresets[selectedIndex];
+            if (controller.LoadPreset(preset))
+            {
+                presetNameInput.SetTextWithoutNotify(preset.DisplayName);
+                RefreshPanel();
+            }
+        }
+
+        private void RefreshPresetOptions(CharacterMorphPreset selectedPreset = null)
+        {
+            availablePresets.Clear();
+            foreach (CharacterMorphPreset preset in presetLibrary.Presets)
+            {
+                if (preset != null)
+                {
+                    availablePresets.Add(preset);
+                }
+            }
+
+            presetDropdown.ClearOptions();
+            if (availablePresets.Count == 0)
+            {
+                presetDropdown.AddOptions(new List<string> { "No presets" });
+                presetDropdown.interactable = false;
+                loadPresetButton.interactable = false;
+                return;
+            }
+
+            var options = new List<string>(availablePresets.Count);
+            int selectedIndex = 0;
+            for (int index = 0; index < availablePresets.Count; index++)
+            {
+                CharacterMorphPreset preset = availablePresets[index];
+                options.Add(preset.DisplayName);
+                if (preset == selectedPreset)
+                {
+                    selectedIndex = index;
+                }
+            }
+
+            presetDropdown.AddOptions(options);
+            presetDropdown.SetValueWithoutNotify(selectedIndex);
+            presetDropdown.RefreshShownValue();
+            presetDropdown.interactable = true;
+            loadPresetButton.interactable = true;
         }
 
         private void SelectTab(string groupId)
@@ -245,9 +345,19 @@ namespace Sol.CharacterCustomization
 
         private void ApplySelectedGroup(bool resetScroll)
         {
+            bool showingPresets = selectedGroup == "Presets";
+            presetPanel.SetActive(showingPresets);
+            mainSliderScrollRect.gameObject.SetActive(!showingPresets);
+            resetGroupButton.gameObject.SetActive(!showingPresets);
+            if (!showingPresets)
+            {
+                resetGroupButtonLabel.text = $"Reset {selectedGroup}";
+            }
+
             foreach (KeyValuePair<string, CharacterMorphSliderRow> pair in rows)
             {
-                bool visible = CharacterMorphCatalog.TryGet(pair.Key, out CharacterMorphDefinition definition) &&
+                bool visible = !showingPresets &&
+                               CharacterMorphCatalog.TryGet(pair.Key, out CharacterMorphDefinition definition) &&
                                definition.Group == selectedGroup;
                 pair.Value.gameObject.SetActive(visible);
                 if (visible)
@@ -264,7 +374,7 @@ namespace Sol.CharacterCustomization
                 }
             }
 
-            if (resetScroll)
+            if (resetScroll && !showingPresets)
             {
                 Canvas.ForceUpdateCanvases();
                 LayoutRebuilder.ForceRebuildLayoutImmediate(content);
@@ -306,7 +416,10 @@ namespace Sol.CharacterCustomization
 
             femaleButton.onClick.AddListener(SelectFemale);
             maleButton.onClick.AddListener(SelectMale);
-            resetButton.onClick.AddListener(ResetCurrentCharacter);
+            savePresetButton.onClick.AddListener(SavePreset);
+            loadPresetButton.onClick.AddListener(LoadPreset);
+            resetAllButton.onClick.AddListener(ResetAll);
+            resetGroupButton.onClick.AddListener(ResetSelectedGroup);
 
             foreach (CharacterMorphTabButton tab in tabButtons)
             {
@@ -333,7 +446,10 @@ namespace Sol.CharacterCustomization
 
             femaleButton.onClick.RemoveListener(SelectFemale);
             maleButton.onClick.RemoveListener(SelectMale);
-            resetButton.onClick.RemoveListener(ResetCurrentCharacter);
+            savePresetButton.onClick.RemoveListener(SavePreset);
+            loadPresetButton.onClick.RemoveListener(LoadPreset);
+            resetAllButton.onClick.RemoveListener(ResetAll);
+            resetGroupButton.onClick.RemoveListener(ResetSelectedGroup);
 
             foreach (KeyValuePair<CharacterMorphTabButton, UnityAction> pair in tabListeners)
             {
@@ -349,6 +465,11 @@ namespace Sol.CharacterCustomization
 
         private static bool IsKnownGroup(string groupId)
         {
+            if (groupId == "Presets")
+            {
+                return true;
+            }
+
             foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
             {
                 if (definition.Group == groupId)
