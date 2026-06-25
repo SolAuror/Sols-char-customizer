@@ -31,8 +31,8 @@ namespace Sol.CharacterCustomization.Editor
                 throw new InvalidOperationException("Exit Play Mode before setting up the preset tab.");
             }
 
-            CharacterMorphPresetLibrary library =
-                AssetDatabase.LoadAssetAtPath<CharacterMorphPresetLibrary>(PresetLibraryPath);
+            CharacterPresetLibrary library =
+                AssetDatabase.LoadAssetAtPath<CharacterPresetLibrary>(PresetLibraryPath);
             if (library == null)
             {
                 throw new InvalidOperationException($"Missing preset library at '{PresetLibraryPath}'.");

@@ -18,14 +18,17 @@ namespace Sol.CharacterCustomization.Editor
         private const string MenuPrefabPath = "Assets/CharCustomization/Prefabs/CharacterMorphMenu.prefab";
         private const string DemoPresetPath = "Assets/CharCustomization/Presets/DemoPreset.asset";
         private const string PresetLibraryPath = "Assets/CharCustomization/Presets/PresetLibrary.asset";
+        private const string SkinPalettePath = "Assets/CharCustomization/Presets/DefaultSkinPalette.asset";
         private const string InputActionsPath = "Assets/CharCustomization/Scripts/InputSystem_Actions.inputactions";
         private static readonly string[] ExpectedGroups =
         {
-            "Presets", "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
+            "Presets", "Skin", "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
         };
         private static readonly HashSet<string> AllowedMenuOverridePaths = new HashSet<string>(StringComparer.Ordinal)
         {
             "controller",
+            "profile",
+            "previewControls",
             "m_Name",
             "m_Pivot.x", "m_Pivot.y",
             "m_AnchorMax.x", "m_AnchorMax.y",
@@ -47,16 +50,17 @@ namespace Sol.CharacterCustomization.Editor
                 throw new InvalidOperationException($"Missing menu prefab at '{MenuPrefabPath}'.");
             }
 
-            CharacterMorphPreset demoPreset = AssetDatabase.LoadAssetAtPath<CharacterMorphPreset>(DemoPresetPath);
-            CharacterMorphPresetLibrary presetLibrary =
-                AssetDatabase.LoadAssetAtPath<CharacterMorphPresetLibrary>(PresetLibraryPath);
-            if (demoPreset == null || presetLibrary == null)
+            CharacterPreset demoPreset = AssetDatabase.LoadAssetAtPath<CharacterPreset>(DemoPresetPath);
+            CharacterPresetLibrary presetLibrary =
+                AssetDatabase.LoadAssetAtPath<CharacterPresetLibrary>(PresetLibraryPath);
+            CharacterSkinPalette skinPalette = AssetDatabase.LoadAssetAtPath<CharacterSkinPalette>(SkinPalettePath);
+            if (demoPreset == null || presetLibrary == null || skinPalette == null)
             {
-                throw new InvalidOperationException("The demo preset or preset library is missing.");
+                throw new InvalidOperationException("The demo preset, preset library, or skin palette is missing.");
             }
 
-            ValidateMenu(menuPrefab, presetLibrary);
-            ValidatePresetLibrary(presetLibrary, demoPreset);
+            ValidateMenu(menuPrefab, presetLibrary, skinPalette);
+            ValidatePresetLibrary(presetLibrary, demoPreset, skinPalette);
             ValidateStatGrowthDefinitions();
             SceneSetup[] previousSetup = EditorSceneManager.GetSceneManagerSetup();
             bool canRestoreSetup = previousSetup.Any(setup => setup.isLoaded && setup.isActive);
@@ -89,7 +93,10 @@ namespace Sol.CharacterCustomization.Editor
             }
         }
 
-        private static void ValidateMenu(GameObject menuPrefab, CharacterMorphPresetLibrary presetLibrary)
+        private static void ValidateMenu(
+            GameObject menuPrefab,
+            CharacterPresetLibrary presetLibrary,
+            CharacterSkinPalette skinPalette)
         {
             CharacterMorphDemoUI menu = menuPrefab.GetComponent<CharacterMorphDemoUI>();
             if (menu == null)
@@ -145,7 +152,9 @@ namespace Sol.CharacterCustomization.Editor
                          "content", "femaleButton", "maleButton", "femaleButtonImage", "maleButtonImage", "sliderRowTemplate",
                          "tabRailScrollRect", "tabRailContent", "mainSliderScrollRect", "presetLibrary", "presetPanel",
                          "presetNameInput", "presetDropdown", "savePresetButton", "loadPresetButton",
-                         "resetAllButton", "resetGroupButton", "resetGroupButtonLabel"
+                         "resetAllButton", "resetGroupButton", "resetGroupButtonLabel", "skinPanel",
+                         "customColorToggleButton", "customColorPanel", "hueSlider", "saturationSlider",
+                         "valueSlider", "customColorPreview"
                      })
             {
                 if (serializedMenu.FindProperty(propertyName).objectReferenceValue == null)
@@ -166,8 +175,8 @@ namespace Sol.CharacterCustomization.Editor
                 throw new InvalidOperationException("The tab rail content must be layout driven.");
             }
 
-            CharacterMorphPresetLibrary assignedLibrary =
-                (CharacterMorphPresetLibrary)serializedMenu.FindProperty("presetLibrary").objectReferenceValue;
+            CharacterPresetLibrary assignedLibrary =
+                (CharacterPresetLibrary)serializedMenu.FindProperty("presetLibrary").objectReferenceValue;
             GameObject presetPanel =
                 (GameObject)serializedMenu.FindProperty("presetPanel").objectReferenceValue;
             TMP_InputField nameInput =
@@ -202,13 +211,57 @@ namespace Sol.CharacterCustomization.Editor
                 throw new InvalidOperationException(
                     "Reset Tab must remain fixed outside the morph ScrollRect.");
             }
+
+            GameObject skinPanel =
+                (GameObject)serializedMenu.FindProperty("skinPanel").objectReferenceValue;
+            GameObject customColorPanel =
+                (GameObject)serializedMenu.FindProperty("customColorPanel").objectReferenceValue;
+            SerializedProperty swatchProperty = serializedMenu.FindProperty("skinSwatches");
+            var swatches = new List<CharacterSkinSwatchButton>();
+            for (int index = 0; index < swatchProperty.arraySize; index++)
+            {
+                if (swatchProperty.GetArrayElementAtIndex(index).objectReferenceValue is CharacterSkinSwatchButton swatch)
+                {
+                    swatches.Add(swatch);
+                }
+            }
+
+            string[] paletteIds = skinPalette.Tones.Select(tone => tone.Id).ToArray();
+            string[] swatchIds = swatches.Select(swatch => swatch.SkinToneId).ToArray();
+            if (skinPanel.activeSelf || customColorPanel.activeSelf ||
+                swatches.Count != paletteIds.Length || swatches.Any(swatch => !swatch.IsConfigured) ||
+                !swatchIds.SequenceEqual(paletteIds, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "The inactive Skin panel must contain one configured authored swatch per palette tone and a collapsed custom colour panel.");
+            }
+
+            CharacterFinalizationFlow flow = menuPrefab.GetComponent<CharacterFinalizationFlow>();
+            if (flow == null)
+            {
+                throw new InvalidOperationException("The menu prefab has no CharacterFinalizationFlow component.");
+            }
+
+            var serializedFlow = new SerializedObject(flow);
+            foreach (string propertyName in new[]
+                     {
+                         "demoUI", "characterNameInput", "randomizeButton", "finalizeButton",
+                         "finalizeButtonLabel", "statusLabel", "customizationInterface"
+                     })
+            {
+                if (serializedFlow.FindProperty(propertyName).objectReferenceValue == null)
+                {
+                    throw new InvalidOperationException($"Finalization reference '{propertyName}' is not assigned.");
+                }
+            }
         }
 
         private static void ValidatePresetLibrary(
-            CharacterMorphPresetLibrary library,
-            CharacterMorphPreset demoPreset)
+            CharacterPresetLibrary library,
+            CharacterPreset demoPreset,
+            CharacterSkinPalette skinPalette)
         {
-            CharacterMorphPreset[] presets = library.Presets.Where(preset => preset != null).ToArray();
+            CharacterPreset[] presets = library.Presets.Where(preset => preset != null).ToArray();
             if (presets.Length == 0 || !presets.Contains(demoPreset) ||
                 presets.Select(preset => preset.DisplayName).Distinct(StringComparer.OrdinalIgnoreCase).Count() != presets.Length)
             {
@@ -216,24 +269,30 @@ namespace Sol.CharacterCustomization.Editor
                     "The preset library must contain the demo preset and unique preset names.");
             }
 
-            foreach (CharacterMorphPreset preset in presets)
+            foreach (CharacterPreset preset in presets)
             {
-                ValidatePreset(preset);
+                ValidatePreset(preset, skinPalette);
             }
         }
 
-        private static void ValidatePreset(CharacterMorphPreset preset)
+        private static void ValidatePreset(CharacterPreset preset, CharacterSkinPalette skinPalette)
         {
-            if (!Enum.IsDefined(typeof(CharacterSex), preset.Sex) ||
+            if (preset.Recipe.Version != CharacterRecipe.CurrentVersion ||
+                !Enum.IsDefined(typeof(CharacterSex), preset.Sex) ||
                 preset.Values.Count != CharacterMorphCatalog.Definitions.Count)
             {
                 throw new InvalidOperationException("The demo preset has an invalid sex or morph count.");
             }
 
+            if (!preset.Recipe.UsesCustomSkinColor && !skinPalette.TryGet(preset.Recipe.SkinToneId, out _))
+            {
+                throw new InvalidOperationException($"Preset '{preset.DisplayName}' references an unknown skin tone.");
+            }
+
             for (int index = 0; index < CharacterMorphCatalog.Definitions.Count; index++)
             {
                 CharacterMorphDefinition definition = CharacterMorphCatalog.Definitions[index];
-                CharacterMorphPresetValue presetValue = preset.Values[index];
+                CharacterMorphValue presetValue = preset.Values[index];
                 if (!string.Equals(presetValue.MorphId, definition.Id, StringComparison.Ordinal) ||
                     presetValue.Value < definition.MinimumValue || presetValue.Value > 1f)
                 {
@@ -329,18 +388,36 @@ namespace Sol.CharacterCustomization.Editor
         private static void ValidateScene(Scene scene)
         {
             CharacterMorphController controller = FindFirst<CharacterMorphController>(scene);
+            CharacterProfile profile = FindFirst<CharacterProfile>(scene);
+            CharacterPreviewControls preview = FindFirst<CharacterPreviewControls>(scene);
             CharacterMorphDemoUI menu = FindFirst<CharacterMorphDemoUI>(scene);
+            CharacterFinalizationFlow flow = FindFirst<CharacterFinalizationFlow>(scene);
             InputSystemUIInputModule inputModule = FindFirst<InputSystemUIInputModule>(scene);
             InputActionAsset expectedActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
-            if (controller == null || menu == null || inputModule == null || expectedActions == null)
+            if (controller == null || profile == null || preview == null || menu == null || flow == null ||
+                inputModule == null || expectedActions == null)
             {
-                throw new InvalidOperationException("The demo scene is missing its controller, menu, UI input module, or input-actions asset.");
+                throw new InvalidOperationException(
+                    "The demo scene is missing its controller, profile, preview, menu, finalization flow, UI input module, or input-actions asset.");
             }
 
             var serializedMenu = new SerializedObject(menu);
-            if (serializedMenu.FindProperty("controller").objectReferenceValue != controller)
+            var serializedFlow = new SerializedObject(flow);
+            if (serializedMenu.FindProperty("controller").objectReferenceValue != controller ||
+                serializedMenu.FindProperty("profile").objectReferenceValue != profile ||
+                serializedFlow.FindProperty("profile").objectReferenceValue != profile ||
+                serializedFlow.FindProperty("previewControls").objectReferenceValue != preview)
             {
-                throw new InvalidOperationException("The menu is not connected to the scene morph controller.");
+                throw new InvalidOperationException("The menu and finalization flow are not connected to the scene character systems.");
+            }
+
+            var serializedProfile = new SerializedObject(profile);
+            if (serializedProfile.FindProperty("controller").objectReferenceValue != controller ||
+                serializedProfile.FindProperty("skinPalette").objectReferenceValue == null ||
+                serializedProfile.FindProperty("femaleSkinRenderers").arraySize == 0 ||
+                serializedProfile.FindProperty("maleSkinRenderers").arraySize == 0)
+            {
+                throw new InvalidOperationException("The scene character profile has incomplete controller, palette, or skin-renderer bindings.");
             }
 
             ValidateInputModule(inputModule, expectedActions);
@@ -382,10 +459,13 @@ namespace Sol.CharacterCustomization.Editor
             GameObject instanceRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(menu.gameObject);
             PropertyModification[] modifications = PrefabUtility.GetPropertyModifications(instanceRoot) ?? Array.Empty<PropertyModification>();
             int controllerOverrides = modifications.Count(modification => modification.propertyPath == "controller");
-            if (controllerOverrides != 1 || modifications.Length > AllowedMenuOverridePaths.Count)
+            int profileOverrides = modifications.Count(modification => modification.propertyPath == "profile");
+            int previewOverrides = modifications.Count(modification => modification.propertyPath == "previewControls");
+            if (controllerOverrides != 1 || profileOverrides != 2 || previewOverrides != 1)
             {
                 throw new InvalidOperationException(
-                    $"The menu instance has {modifications.Length} overrides and {controllerOverrides} controller overrides; expected only the prefab root and one controller reference.");
+                    $"The menu instance must have one controller, two profile, and one preview-controls reference override; " +
+                    $"found {controllerOverrides}, {profileOverrides}, and {previewOverrides}.");
             }
 
             PropertyModification unexpected = modifications.FirstOrDefault(modification =>

@@ -6,11 +6,12 @@ This page describes the current implemented architecture for the system presenta
 
 ```mermaid
 flowchart LR
-    Player["Player input<br/>tabs, sliders, sex, reset, presets"]
+    Player["Player input<br/>tabs, sliders, skin, name, finalize"]
     Stats["Host gameplay stats<br/>muscle and body fat, 0 to 1"]
 
     subgraph View["Authored UI prefab"]
         DemoUI["CharacterMorphDemoUI<br/>coordinates the menu"]
+        Finalize["CharacterFinalizationFlow<br/>save and camera handoff"]
         Rows["Slider rows and tab buttons<br/>store stable IDs"]
     end
 
@@ -23,7 +24,11 @@ flowchart LR
         Bipolar["BipolarMorphDefinition<br/>negative to positive"]
         Positive["PositiveOnlyMorphDefinition<br/>zero to positive"]
         Growth["StatGrowthDefinition<br/>stat to morph mapping"]
-        Preset["CharacterMorphPresetLibrary<br/>named sex and morph snapshots"]
+        Profile["CharacterProfile<br/>capture and apply recipes"]
+        Recipe["CharacterRecipe<br/>sex, skin, stable morph values"]
+        Preset["CharacterPresetLibrary<br/>authored recipe assets"]
+        Saves["Player save repository<br/>multiple JSON records"]
+        Preview["CharacterPreviewControls<br/>native focus and blend"]
     end
 
     subgraph UnityModel["Unity character model"]
@@ -32,17 +37,24 @@ flowchart LR
     end
 
     Player --> DemoUI
+    Player --> Finalize
     Stats -->|"SetStatGrowth"| Growth
     Growth -->|"stable morph ID and mapped value"| Controller
     DemoUI <--> Rows
-    DemoUI -->|"SetMorph, SetSex, Reset, Save, Load"| Controller
+    DemoUI -->|"SetMorph, SetSex, Reset"| Controller
+    DemoUI -->|"Save and load"| Profile
+    Finalize -->|"CaptureRecipe"| Profile
+    Finalize --> Saves
+    Finalize --> Preview
     Catalog -->|"labels, ranges, groups"| DemoUI
     Catalog -->|"logical ID to shape names"| Controller
     Catalog --> Definition
     Definition -->|"specialised by"| Bipolar
     Definition -->|"specialised by"| Positive
     Controller <--> Recipes
-    Controller <--> Preset
+    Profile <--> Recipe
+    Profile <--> Preset
+    Profile --> Controller
     Controller --> Bindings
     Controller -->|"positive and negative weights"| Renderers
     Roots --> Renderers
@@ -126,21 +138,22 @@ BODY FAT
     full stat maps to the heavy weight shape
 ```
 
-### Save or load the authored preset
+### Save, load, or finalize a recipe
 
 ```text
 SAVE PRESET
     read and trim the entered preset name
     create a new named library entry or select the matching existing entry
-    store the active sex
-    replace the preset values with every catalogue morph in catalogue order
+    capture sex, skin and every catalogue morph in catalogue order
+    overwrite the CharacterPreset recipe
     persist the ScriptableObject asset immediately when running in the Unity Editor
 
 LOAD PRESET
     select a named entry from the preset dropdown
     reject empty or duplicate identifiers
     warn and ignore identifiers that are not in the catalogue
-    switch to the stored sex
+    apply the recipe through CharacterProfile
+    switch to the stored sex and skin
     for each catalogue definition
         apply its stored value, or zero when it is missing
     refresh the visible sliders
@@ -150,6 +163,14 @@ RESET TAB
 
 RESET ALL
     set every morph value on the visible character to zero
+
+FINALIZE PLAYER
+    require a trimmed character name
+    capture the current CharacterRecipe
+    if the case-insensitive name already exists, require a second confirmation
+    atomically write the record list to players.json
+    raise Finalized with the saved record
+    when a gameplay camera is assigned, blend the preview transform and FOV before enabling gameplay
 ```
 
 ## Presentation Summary
@@ -159,7 +180,9 @@ RESET ALL
 - Inheritance removes morph-type decisions from the controller: each definition owns its behaviour.
 - Stat-growth definitions connect normalized gameplay values to muscle and body-fat morphs without owning progression rules.
 - Male and female recipes are independent and remain in memory while switching.
-- The authored preset is a complete sex-and-recipe snapshot; it is not durable player save storage.
+- One versioned recipe shape is shared by authored presets, NPC profiles and durable player records.
+- Player names and stable record IDs live outside reusable appearance recipes.
+- The preview camera stays dependency-free and hands off to an optional gameplay camera natively.
 - One catalogue contains model-specific naming differences in a predictable place.
 - Missing or incomplete bindings fail safely and can be reported by the validator.
 

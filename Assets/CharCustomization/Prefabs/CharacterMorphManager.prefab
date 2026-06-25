@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2584010223268332119}
   - component: {fileID: 5533027457802694159}
   - component: {fileID: 4876277818347838247}
+  - component: {fileID: 7763284161080261142}
   m_Layer: 0
   m_Name: CharacterMorphManager
   m_TagString: Untagged
@@ -62,9 +63,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterPreviewControls
   controller: {fileID: 5533027457802694159}
   previewCamera: {fileID: 0}
+  focusOffset: {x: 0, y: 0, z: 0}
+  positionSmoothTime: 0.12
+  rotationSharpness: 14
   rotationSensitivity: 0.25
   zoomSensitivity: 0.003
   minimumZoomOffset: -1.25
   maximumZoomOffset: 1.1
   panSensitivity: 0.003
   maximumPanOffset: 0.9
+--- !u!114 &7763284161080261142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3076914116413420698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbcae43c37f3b7c49acd2df8102cd8c0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterProfile
+  controller: {fileID: 5533027457802694159}
+  authoredPreset: {fileID: 0}
+  applyOnAwake: 0
+  skinPalette: {fileID: 11400000, guid: 5d0582a508e31904eb23828d9d3da4cb, type: 2}
+  femaleSkinRenderers: []
+  maleSkinRenderers: []

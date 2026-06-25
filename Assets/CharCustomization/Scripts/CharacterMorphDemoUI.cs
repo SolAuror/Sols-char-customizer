@@ -10,6 +10,7 @@ namespace Sol.CharacterCustomization
     public sealed class CharacterMorphDemoUI : MonoBehaviour
     {
         [SerializeField] private CharacterMorphController controller;
+        [SerializeField] private CharacterProfile profile;
         [SerializeField] private RectTransform content;
         [SerializeField] private Button femaleButton;
         [SerializeField] private Button maleButton;
@@ -19,7 +20,7 @@ namespace Sol.CharacterCustomization
         [SerializeField] private ScrollRect tabRailScrollRect;
         [SerializeField] private RectTransform tabRailContent;
         [SerializeField] private ScrollRect mainSliderScrollRect;
-        [SerializeField] private CharacterMorphPresetLibrary presetLibrary;
+        [SerializeField] private CharacterPresetLibrary presetLibrary;
         [SerializeField] private GameObject presetPanel;
         [SerializeField] private TMP_InputField presetNameInput;
         [SerializeField] private TMP_Dropdown presetDropdown;
@@ -28,15 +29,25 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Button resetAllButton;
         [SerializeField] private Button resetGroupButton;
         [SerializeField] private TMP_Text resetGroupButtonLabel;
+        [SerializeField] private GameObject skinPanel;
+        [SerializeField] private CharacterSkinSwatchButton[] skinSwatches = Array.Empty<CharacterSkinSwatchButton>();
+        [SerializeField] private Button customColorToggleButton;
+        [SerializeField] private GameObject customColorPanel;
+        [SerializeField] private Slider hueSlider;
+        [SerializeField] private Slider saturationSlider;
+        [SerializeField] private Slider valueSlider;
+        [SerializeField] private Image customColorPreview;
         [SerializeField] private CharacterMorphTabButton[] tabButtons = Array.Empty<CharacterMorphTabButton>();
         [SerializeField] private Color selectedTabColor = new(0.82f, 0.73f, 0.55f, 1f);
         [SerializeField] private Color inactiveTabColor = new(0.27f, 0.27f, 0.27f, 1f);
 
         private readonly Dictionary<string, CharacterMorphSliderRow> rows = new(StringComparer.Ordinal);
         private readonly Dictionary<CharacterMorphTabButton, UnityAction> tabListeners = new();
-        private readonly List<CharacterMorphPreset> availablePresets = new();
+        private readonly Dictionary<CharacterSkinSwatchButton, UnityAction> skinListeners = new();
+        private readonly List<CharacterPreset> availablePresets = new();
         private bool initialized;
         private bool listenersRegistered;
+        private bool refreshingSkin;
         private string selectedGroup = "Body";
 
         private static readonly Color AccentColor = new(0.82f, 0.73f, 0.55f, 1f);
@@ -125,6 +136,35 @@ namespace Sol.CharacterCustomization
                     row.Refresh();
                 }
             }
+
+            RefreshSkinPanel();
+        }
+
+        public void RefreshSkinPanel()
+        {
+            if (profile == null || hueSlider == null || saturationSlider == null ||
+                valueSlider == null || customColorPreview == null)
+            {
+                return;
+            }
+
+            refreshingSkin = true;
+            foreach (CharacterSkinSwatchButton swatch in skinSwatches)
+            {
+                if (swatch != null)
+                {
+                    bool selected = !profile.UsesCustomSkinColor && swatch.SkinToneId == profile.SkinToneId;
+                    swatch.transform.localScale = selected ? Vector3.one * 1.08f : Vector3.one;
+                }
+            }
+
+            Color color = profile.CurrentSkinColor;
+            Color.RGBToHSV(color, out float hue, out float saturation, out float value);
+            hueSlider.SetValueWithoutNotify(hue);
+            saturationSlider.SetValueWithoutNotify(saturation);
+            valueSlider.SetValueWithoutNotify(value);
+            customColorPreview.color = color;
+            refreshingSkin = false;
         }
 
         private void Initialize()
@@ -154,6 +194,7 @@ namespace Sol.CharacterCustomization
 
             initialized = true;
             RefreshPresetOptions();
+            customColorPanel.SetActive(false);
             RegisterListeners();
             controller.SetSex(CharacterSex.Female);
             ApplySelectedGroup(false);
@@ -163,6 +204,7 @@ namespace Sol.CharacterCustomization
         private bool HasRequiredReferences()
         {
             return controller != null &&
+                   profile != null &&
                    content != null &&
                    femaleButton != null &&
                    maleButton != null &&
@@ -181,8 +223,17 @@ namespace Sol.CharacterCustomization
                    resetAllButton != null &&
                    resetGroupButton != null &&
                    resetGroupButtonLabel != null &&
+                   skinPanel != null &&
+                   skinSwatches != null &&
+                   skinSwatches.Length > 0 &&
+                   customColorToggleButton != null &&
+                   customColorPanel != null &&
+                   hueSlider != null &&
+                   saturationSlider != null &&
+                   valueSlider != null &&
+                   customColorPreview != null &&
                    tabButtons != null &&
-                   tabButtons.Length == 9;
+                   tabButtons.Length == 10;
         }
 
         private void CacheAuthoredRows()
@@ -241,6 +292,7 @@ namespace Sol.CharacterCustomization
         private void SelectSex(CharacterSex sex)
         {
             controller.SetSex(sex);
+            profile.RefreshSkin();
             RefreshPanel();
         }
 
@@ -267,9 +319,15 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            CharacterMorphPreset preset = presetLibrary.GetOrCreate(presetName);
-            if (preset != null && controller.SavePreset(preset))
+            CharacterPreset preset = presetLibrary.GetOrCreate(presetName);
+            CharacterRecipe recipe = profile.CaptureRecipe();
+            if (preset != null && recipe != null)
             {
+                preset.Overwrite(recipe);
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(preset);
+                UnityEditor.AssetDatabase.SaveAssetIfDirty(preset);
+#endif
                 presetLibrary.MarkDirtyAndSave();
                 RefreshPresetOptions(preset);
             }
@@ -284,18 +342,18 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            CharacterMorphPreset preset = availablePresets[selectedIndex];
-            if (controller.LoadPreset(preset))
+            CharacterPreset preset = availablePresets[selectedIndex];
+            if (profile.ApplyPreset(preset))
             {
                 presetNameInput.SetTextWithoutNotify(preset.DisplayName);
                 RefreshPanel();
             }
         }
 
-        private void RefreshPresetOptions(CharacterMorphPreset selectedPreset = null)
+        private void RefreshPresetOptions(CharacterPreset selectedPreset = null)
         {
             availablePresets.Clear();
-            foreach (CharacterMorphPreset preset in presetLibrary.Presets)
+            foreach (CharacterPreset preset in presetLibrary.Presets)
             {
                 if (preset != null)
                 {
@@ -316,7 +374,7 @@ namespace Sol.CharacterCustomization
             int selectedIndex = 0;
             for (int index = 0; index < availablePresets.Count; index++)
             {
-                CharacterMorphPreset preset = availablePresets[index];
+                CharacterPreset preset = availablePresets[index];
                 options.Add(preset.DisplayName);
                 if (preset == selectedPreset)
                 {
@@ -346,17 +404,20 @@ namespace Sol.CharacterCustomization
         private void ApplySelectedGroup(bool resetScroll)
         {
             bool showingPresets = selectedGroup == "Presets";
+            bool showingSkin = selectedGroup == "Skin";
+            bool showingMorphs = !showingPresets && !showingSkin;
             presetPanel.SetActive(showingPresets);
-            mainSliderScrollRect.gameObject.SetActive(!showingPresets);
-            resetGroupButton.gameObject.SetActive(!showingPresets);
-            if (!showingPresets)
+            skinPanel.SetActive(showingSkin);
+            mainSliderScrollRect.gameObject.SetActive(showingMorphs);
+            resetGroupButton.gameObject.SetActive(showingMorphs);
+            if (showingMorphs)
             {
                 resetGroupButtonLabel.text = $"Reset {selectedGroup}";
             }
 
             foreach (KeyValuePair<string, CharacterMorphSliderRow> pair in rows)
             {
-                bool visible = !showingPresets &&
+                bool visible = showingMorphs &&
                                CharacterMorphCatalog.TryGet(pair.Key, out CharacterMorphDefinition definition) &&
                                definition.Group == selectedGroup;
                 pair.Value.gameObject.SetActive(visible);
@@ -374,7 +435,7 @@ namespace Sol.CharacterCustomization
                 }
             }
 
-            if (resetScroll && !showingPresets)
+            if (resetScroll && showingMorphs)
             {
                 Canvas.ForceUpdateCanvases();
                 LayoutRebuilder.ForceRebuildLayoutImmediate(content);
@@ -420,6 +481,23 @@ namespace Sol.CharacterCustomization
             loadPresetButton.onClick.AddListener(LoadPreset);
             resetAllButton.onClick.AddListener(ResetAll);
             resetGroupButton.onClick.AddListener(ResetSelectedGroup);
+            customColorToggleButton.onClick.AddListener(ToggleCustomColorPanel);
+            hueSlider.onValueChanged.AddListener(OnCustomColorChanged);
+            saturationSlider.onValueChanged.AddListener(OnCustomColorChanged);
+            valueSlider.onValueChanged.AddListener(OnCustomColorChanged);
+
+            foreach (CharacterSkinSwatchButton swatch in skinSwatches)
+            {
+                if (swatch == null || !swatch.IsConfigured || skinListeners.ContainsKey(swatch))
+                {
+                    continue;
+                }
+
+                CharacterSkinSwatchButton capturedSwatch = swatch;
+                UnityAction listener = () => SelectSkinTone(capturedSwatch.SkinToneId);
+                capturedSwatch.Button.onClick.AddListener(listener);
+                skinListeners.Add(capturedSwatch, listener);
+            }
 
             foreach (CharacterMorphTabButton tab in tabButtons)
             {
@@ -450,6 +528,20 @@ namespace Sol.CharacterCustomization
             loadPresetButton.onClick.RemoveListener(LoadPreset);
             resetAllButton.onClick.RemoveListener(ResetAll);
             resetGroupButton.onClick.RemoveListener(ResetSelectedGroup);
+            customColorToggleButton.onClick.RemoveListener(ToggleCustomColorPanel);
+            hueSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
+            saturationSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
+            valueSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
+
+            foreach (KeyValuePair<CharacterSkinSwatchButton, UnityAction> pair in skinListeners)
+            {
+                if (pair.Key != null && pair.Key.Button != null)
+                {
+                    pair.Key.Button.onClick.RemoveListener(pair.Value);
+                }
+            }
+
+            skinListeners.Clear();
 
             foreach (KeyValuePair<CharacterMorphTabButton, UnityAction> pair in tabListeners)
             {
@@ -465,7 +557,7 @@ namespace Sol.CharacterCustomization
 
         private static bool IsKnownGroup(string groupId)
         {
-            if (groupId == "Presets")
+            if (groupId == "Presets" || groupId == "Skin")
             {
                 return true;
             }
@@ -479,6 +571,37 @@ namespace Sol.CharacterCustomization
             }
 
             return false;
+        }
+
+        private void SelectSkinTone(string toneId)
+        {
+            if (profile.SetSkinTone(toneId))
+            {
+                RefreshSkinPanel();
+            }
+        }
+
+        private void ToggleCustomColorPanel()
+        {
+            customColorPanel.SetActive(!customColorPanel.activeSelf);
+            if (customColorPanel.activeSelf)
+            {
+                RefreshSkinPanel();
+            }
+        }
+
+        private void OnCustomColorChanged(float _)
+        {
+            if (refreshingSkin)
+            {
+                return;
+            }
+
+            Color color = Color.HSVToRGB(hueSlider.value, saturationSlider.value, valueSlider.value);
+            color.a = 1f;
+            profile.SetCustomSkinColor(color);
+            customColorPreview.color = color;
+            RefreshSkinPanel();
         }
 
         private static int GetCatalogOrder(string morphId)

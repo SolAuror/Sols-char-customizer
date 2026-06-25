@@ -65,58 +65,67 @@ namespace Sol.CharacterCustomization
             return recipes[activeSex].TryGetValue(morphId, out float value) ? value : 0f;
         }
 
-        public bool SavePreset(CharacterMorphPreset preset)
+        public IReadOnlyList<CharacterMorphValue> CaptureMorphValues()
         {
             Initialize();
-            if (preset == null)
+            var values = new List<CharacterMorphValue>(CharacterMorphCatalog.Definitions.Count);
+            foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
             {
-                Debug.LogWarning("Cannot save a null character morph preset.", this);
+                values.Add(new CharacterMorphValue(definition.Id, GetMorph(definition.Id)));
+            }
+
+            return values;
+        }
+
+        public bool ApplyMorphValues(IReadOnlyList<CharacterMorphValue> values)
+        {
+            Initialize();
+            if (values == null)
+            {
+                Debug.LogWarning("Cannot apply a null morph value collection.", this);
                 return false;
             }
 
-            preset.Overwrite(activeSex, CharacterMorphCatalog.Definitions, GetMorph);
+            var savedValues = new Dictionary<string, float>(StringComparer.Ordinal);
+            foreach (CharacterMorphValue savedValue in values)
+            {
+                if (string.IsNullOrWhiteSpace(savedValue.MorphId) ||
+                    !savedValues.TryAdd(savedValue.MorphId, savedValue.Value))
+                {
+                    Debug.LogWarning($"Ignored an empty or duplicate morph ID '{savedValue.MorphId}'.", this);
+                }
+            }
 
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(preset);
-            UnityEditor.AssetDatabase.SaveAssetIfDirty(preset);
-#endif
+            foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
+            {
+                float value = savedValues.TryGetValue(definition.Id, out float savedValue) ? savedValue : 0f;
+                SetMorph(definition.Id, value);
+            }
+
+            foreach (string savedId in savedValues.Keys)
+            {
+                if (!CharacterMorphCatalog.TryGet(savedId, out _))
+                {
+                    Debug.LogWarning($"Ignored unknown character morph '{savedId}'.", this);
+                }
+            }
 
             return true;
         }
 
-        public bool LoadPreset(CharacterMorphPreset preset)
+        public void RandomizeCurrent(float rangeScale = 0.65f, System.Random random = null)
         {
             Initialize();
-            if (preset == null)
-            {
-                Debug.LogWarning("Cannot load a null character morph preset.", this);
-                return false;
-            }
+            random ??= new System.Random();
+            float scale = Mathf.Clamp01(rangeScale);
 
-            if (!preset.HasValidIdentifiers(out string error))
-            {
-                Debug.LogWarning($"Cannot load character morph preset '{preset.name}'. {error}", preset);
-                return false;
-            }
-
-            foreach (CharacterMorphPresetValue presetValue in preset.Values)
-            {
-                if (!CharacterMorphCatalog.TryGet(presetValue.MorphId, out _))
-                {
-                    Debug.LogWarning(
-                        $"Preset '{preset.name}' contains unknown morph '{presetValue.MorphId}', which was ignored.",
-                        preset);
-                }
-            }
-
-            SetSex(preset.Sex);
             foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
             {
-                float value = preset.TryGetValue(definition.Id, out float savedValue) ? savedValue : 0f;
+                float minimum = definition.MinimumValue < 0f ? definition.MinimumValue * scale : 0f;
+                float maximum = scale;
+                float value = Mathf.Lerp(minimum, maximum, (float)random.NextDouble());
                 SetMorph(definition.Id, value);
             }
-
-            return true;
         }
 
         public void SetStatGrowth(string statId, float normalizedValue)

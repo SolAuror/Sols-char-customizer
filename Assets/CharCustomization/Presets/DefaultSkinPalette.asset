@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c92c644f60e5ea4db2ccab502886642, type: 3}
+  m_Name: DefaultSkinPalette
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterSkinPalette
+  defaultToneId: fair
+  tones:
+  - id: porcelain
+    label: Porcelain
+    color: {r: 0.9647059, g: 0.8235294, b: 0.72156864, a: 1}
+  - id: fair
+    label: Fair
+    color: {r: 0.92156863, g: 0.72156864, b: 0.57254905, a: 1}
+  - id: light_brown
+    label: Light Brown
+    color: {r: 0.84705883, g: 0.60784316, b: 0.44705883, a: 1}
+  - id: tan
+    label: Tan
+    color: {r: 0.7411765, g: 0.4745098, b: 0.34509805, a: 1}
+  - id: medium
+    label: Medium
+    color: {r: 0.6156863, g: 0.36862746, b: 0.2627451, a: 1}
+  - id: brown
+    label: Brown
+    color: {r: 0.47058824, g: 0.2627451, b: 0.18431373, a: 1}
+  - id: dark
+    label: Dark
+    color: {r: 0.34117648, g: 0.1882353, b: 0.13725491, a: 1}
+  - id: deep
+    label: Deep
+    color: {r: 0.20784314, g: 0.11372549, b: 0.09411765, a: 1}
