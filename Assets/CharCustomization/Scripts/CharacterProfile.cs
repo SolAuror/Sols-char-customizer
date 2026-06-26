@@ -5,8 +5,6 @@ namespace Sol.CharacterCustomization
 {
     public sealed class CharacterProfile : MonoBehaviour
     {
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-
         [Header("Recipe")]
         [SerializeField] private CharacterMorphController controller;
         [SerializeField] private CharacterPreset authoredPreset;
@@ -14,10 +12,12 @@ namespace Sol.CharacterCustomization
 
         [Header("Skin")]
         [SerializeField] private CharacterSkinPalette skinPalette;
+        [SerializeField] private string[] skinColorPropertyNames = { "_BaseColor", "_Color" };
         [SerializeField] private Renderer[] femaleSkinRenderers = Array.Empty<Renderer>();
         [SerializeField] private Renderer[] maleSkinRenderers = Array.Empty<Renderer>();
 
         private MaterialPropertyBlock propertyBlock;
+        private int[] skinColorPropertyIds;
         private string skinToneId = CharacterRecipe.DefaultSkinToneId;
         private bool usesCustomSkinColor;
         private Color customSkinColor = Color.white;
@@ -36,6 +36,7 @@ namespace Sol.CharacterCustomization
                 controller = GetComponent<CharacterMorphController>();
             }
 
+            CacheSkinPropertyIds();
             CharacterSkinTone defaultTone = skinPalette != null ? skinPalette.GetDefault() : null;
             if (defaultTone != null)
             {
@@ -187,6 +188,7 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
+            CacheSkinPropertyIds();
             foreach (Renderer targetRenderer in renderers)
             {
                 if (targetRenderer == null)
@@ -196,10 +198,44 @@ namespace Sol.CharacterCustomization
 
                 propertyBlock ??= new MaterialPropertyBlock();
                 targetRenderer.GetPropertyBlock(propertyBlock);
-                propertyBlock.SetColor(BaseColorId, color);
+                foreach (int propertyId in skinColorPropertyIds)
+                {
+                    propertyBlock.SetColor(propertyId, color);
+                }
+
                 targetRenderer.SetPropertyBlock(propertyBlock);
                 propertyBlock.Clear();
             }
+        }
+
+        private void CacheSkinPropertyIds()
+        {
+            if (skinColorPropertyIds != null)
+            {
+                return;
+            }
+
+            if (skinColorPropertyNames == null || skinColorPropertyNames.Length == 0)
+            {
+                skinColorPropertyNames = new[] { "_BaseColor", "_Color" };
+            }
+
+            var ids = new System.Collections.Generic.List<int>(skinColorPropertyNames.Length);
+            foreach (string propertyName in skinColorPropertyNames)
+            {
+                if (!string.IsNullOrWhiteSpace(propertyName))
+                {
+                    ids.Add(Shader.PropertyToID(propertyName.Trim()));
+                }
+            }
+
+            if (ids.Count == 0)
+            {
+                ids.Add(Shader.PropertyToID("_BaseColor"));
+                ids.Add(Shader.PropertyToID("_Color"));
+            }
+
+            skinColorPropertyIds = ids.ToArray();
         }
     }
 }

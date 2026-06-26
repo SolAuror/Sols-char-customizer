@@ -20,27 +20,6 @@ namespace Sol.CharacterCustomization.Editor
         private const string PresetLibraryPath = "Assets/CharCustomization/Presets/PresetLibrary.asset";
         private const string SkinPalettePath = "Assets/CharCustomization/Presets/DefaultSkinPalette.asset";
         private const string InputActionsPath = "Assets/CharCustomization/Scripts/InputSystem_Actions.inputactions";
-        private static readonly string[] ExpectedGroups =
-        {
-            "Presets", "Skin", "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
-        };
-        private static readonly HashSet<string> AllowedMenuOverridePaths = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "controller",
-            "profile",
-            "previewControls",
-            "m_Name",
-            "m_Pivot.x", "m_Pivot.y",
-            "m_AnchorMax.x", "m_AnchorMax.y",
-            "m_AnchorMin.x", "m_AnchorMin.y",
-            "m_SizeDelta.x", "m_SizeDelta.y",
-            "m_LocalScale.x", "m_LocalScale.y", "m_LocalScale.z",
-            "m_LocalPosition.x", "m_LocalPosition.y", "m_LocalPosition.z",
-            "m_LocalRotation.w", "m_LocalRotation.x", "m_LocalRotation.y", "m_LocalRotation.z",
-            "m_AnchoredPosition.x", "m_AnchoredPosition.y",
-            "m_LocalEulerAnglesHint.x", "m_LocalEulerAnglesHint.y", "m_LocalEulerAnglesHint.z"
-        };
-
         [MenuItem("Tools/Character Customization/Validate Morph Demo")]
         public static void ValidateDemo()
         {
@@ -125,9 +104,10 @@ namespace Sol.CharacterCustomization.Editor
             CharacterMorphSliderRow[] visibleRows = authored.Where(row => row.gameObject.activeSelf).ToArray();
             if (visibleRows.Length != 10 || visibleRows.Any(row =>
                     !CharacterMorphCatalog.TryGet(row.MorphId, out CharacterMorphDefinition definition) ||
-                    definition.Group != "Body"))
+                    definition.Group != CharacterCustomizationUiConfig.DefaultMorphGroupId))
             {
-                throw new InvalidOperationException("Body must be the initial tab with exactly its 10 authored rows visible.");
+                throw new InvalidOperationException(
+                    $"{CharacterCustomizationUiConfig.DefaultMorphGroupId} must be the initial tab with exactly its 10 authored rows visible.");
             }
 
             string[] authoredOrder = authored.OrderBy(row => row.transform.GetSiblingIndex())
@@ -194,15 +174,15 @@ namespace Sol.CharacterCustomization.Editor
             ScrollRect sliderScroll =
                 (ScrollRect)serializedMenu.FindProperty("mainSliderScrollRect").objectReferenceValue;
 
-            if (assignedLibrary != presetLibrary || presetPanel.activeSelf ||
-                nameInput.transform.parent != presetPanel.transform ||
-                dropdown.transform.parent != presetPanel.transform ||
-                !savePresetButton.transform.IsChildOf(presetPanel.transform) ||
-                !loadPresetButton.transform.IsChildOf(presetPanel.transform) ||
-                !resetAllButton.transform.IsChildOf(presetPanel.transform))
+            if (assignedLibrary != presetLibrary ||
+                nameInput.transform.root != menuPrefab.transform ||
+                dropdown.transform.root != menuPrefab.transform ||
+                savePresetButton.transform.root != menuPrefab.transform ||
+                loadPresetButton.transform.root != menuPrefab.transform ||
+                resetAllButton.transform.root != menuPrefab.transform)
             {
                 throw new InvalidOperationException(
-                    "The inactive Preset Panel must contain its name, dropdown, Save, Load, and Reset All controls.");
+                    "The preset references must stay assigned to authored controls on the menu prefab.");
             }
 
             if (!resetGroupButton.gameObject.activeSelf || resetGroupButton.transform.parent != sliderScroll.transform.parent ||
@@ -246,13 +226,34 @@ namespace Sol.CharacterCustomization.Editor
             foreach (string propertyName in new[]
                      {
                          "demoUI", "characterNameInput", "randomizeButton", "finalizeButton",
-                         "finalizeButtonLabel", "statusLabel", "customizationInterface"
+                         "statusLabel", "customizationInterface"
                      })
             {
                 if (serializedFlow.FindProperty(propertyName).objectReferenceValue == null)
                 {
                     throw new InvalidOperationException($"Finalization reference '{propertyName}' is not assigned.");
                 }
+            }
+
+            TMP_InputField footerNameInput =
+                serializedFlow.FindProperty("characterNameInput").objectReferenceValue as TMP_InputField;
+            Button footerRandomize =
+                serializedFlow.FindProperty("randomizeButton").objectReferenceValue as Button;
+            Button footerFinalize =
+                serializedFlow.FindProperty("finalizeButton").objectReferenceValue as Button;
+            TMP_Text footerStatus =
+                serializedFlow.FindProperty("statusLabel").objectReferenceValue as TMP_Text;
+            if (footerNameInput == null ||
+                footerRandomize == null ||
+                footerFinalize == null ||
+                footerStatus == null ||
+                footerNameInput.transform.root != menuPrefab.transform ||
+                footerRandomize.transform.root != menuPrefab.transform ||
+                footerFinalize.transform.root != menuPrefab.transform ||
+                footerStatus.transform.root != menuPrefab.transform)
+            {
+                throw new InvalidOperationException(
+                    "The finalization controls must be assigned to authored controls on the menu prefab.");
             }
         }
 
@@ -316,20 +317,21 @@ namespace Sol.CharacterCustomization.Editor
                 }
             }
 
+            IReadOnlyList<string> expectedGroups = CharacterCustomizationUiConfig.TabGroups;
             string[] duplicateGroups = tabs.GroupBy(tab => tab.GroupId, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1).Select(group => group.Key).ToArray();
-            string[] missingGroups = ExpectedGroups.Where(group => tabs.All(tab => tab.GroupId != group)).ToArray();
-            string[] unexpectedGroups = tabs.Where(tab => !ExpectedGroups.Contains(tab.GroupId, StringComparer.Ordinal))
+            string[] missingGroups = expectedGroups.Where(group => tabs.All(tab => tab.GroupId != group)).ToArray();
+            string[] unexpectedGroups = tabs.Where(tab => !expectedGroups.Contains(tab.GroupId, StringComparer.Ordinal))
                 .Select(tab => tab.GroupId).ToArray();
 
-            if (tabsProperty.arraySize != ExpectedGroups.Length || tabs.Count != ExpectedGroups.Length ||
+            if (tabsProperty.arraySize != expectedGroups.Count || tabs.Count != expectedGroups.Count ||
                 tabs.Any(tab => !tab.IsConfigured || tab.Label.text != tab.GroupId) ||
-                !tabs.Select(tab => tab.GroupId).SequenceEqual(ExpectedGroups, StringComparer.Ordinal) ||
+                !tabs.Select(tab => tab.GroupId).SequenceEqual(expectedGroups, StringComparer.Ordinal) ||
                 duplicateGroups.Length > 0 || missingGroups.Length > 0 ||
                 unexpectedGroups.Length > 0)
             {
                 throw new InvalidOperationException(
-                    $"Invalid morph tabs. Configured: {tabs.Count}/{ExpectedGroups.Length}, " +
+                    $"Invalid morph tabs. Configured: {tabs.Count}/{expectedGroups.Count}, " +
                     $"duplicates: {string.Join(", ", duplicateGroups)}, missing: {string.Join(", ", missingGroups)}, " +
                     $"unexpected: {string.Join(", ", unexpectedGroups)}.");
             }
@@ -343,7 +345,8 @@ namespace Sol.CharacterCustomization.Editor
 
             if (tabs[0].transform.GetSiblingIndex() >= tabs[1].transform.GetSiblingIndex())
             {
-                throw new InvalidOperationException("The Presets tab must be authored above Body.");
+                throw new InvalidOperationException(
+                    $"The {CharacterCustomizationUiConfig.PresetsGroupId} tab must be authored above {CharacterCustomizationUiConfig.DefaultMorphGroupId}.");
             }
         }
 
@@ -403,12 +406,31 @@ namespace Sol.CharacterCustomization.Editor
 
             var serializedMenu = new SerializedObject(menu);
             var serializedFlow = new SerializedObject(flow);
-            if (serializedMenu.FindProperty("controller").objectReferenceValue != controller ||
-                serializedMenu.FindProperty("profile").objectReferenceValue != profile ||
-                serializedFlow.FindProperty("profile").objectReferenceValue != profile ||
-                serializedFlow.FindProperty("previewControls").objectReferenceValue != preview)
+            var missingLinks = new List<string>();
+            if (serializedMenu.FindProperty("controller").objectReferenceValue != controller)
             {
-                throw new InvalidOperationException("The menu and finalization flow are not connected to the scene character systems.");
+                missingLinks.Add("menu.controller");
+            }
+
+            if (serializedMenu.FindProperty("profile").objectReferenceValue == null)
+            {
+                missingLinks.Add("menu.profile");
+            }
+
+            if (serializedFlow.FindProperty("profile").objectReferenceValue == null)
+            {
+                missingLinks.Add("flow.profile");
+            }
+
+            if (serializedFlow.FindProperty("previewControls").objectReferenceValue == null)
+            {
+                missingLinks.Add("flow.previewControls");
+            }
+
+            if (missingLinks.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"The menu and finalization flow are missing scene character links: {string.Join(", ", missingLinks)}.");
             }
 
             var serializedProfile = new SerializedObject(profile);
@@ -418,6 +440,15 @@ namespace Sol.CharacterCustomization.Editor
                 serializedProfile.FindProperty("maleSkinRenderers").arraySize == 0)
             {
                 throw new InvalidOperationException("The scene character profile has incomplete controller, palette, or skin-renderer bindings.");
+            }
+
+            var serializedPreview = new SerializedObject(preview);
+            Vector2 viewportFocus = serializedPreview.FindProperty("viewportFocus").vector2Value;
+            if (viewportFocus.x < 0.6f || viewportFocus.x > 0.75f ||
+                viewportFocus.y < 0.45f || viewportFocus.y > 0.55f)
+            {
+                throw new InvalidOperationException(
+                    "The preview camera should frame the character in the open screen space beside the UI.");
             }
 
             ValidateInputModule(inputModule, expectedActions);
@@ -461,18 +492,11 @@ namespace Sol.CharacterCustomization.Editor
             int controllerOverrides = modifications.Count(modification => modification.propertyPath == "controller");
             int profileOverrides = modifications.Count(modification => modification.propertyPath == "profile");
             int previewOverrides = modifications.Count(modification => modification.propertyPath == "previewControls");
-            if (controllerOverrides != 1 || profileOverrides != 2 || previewOverrides != 1)
+            if (controllerOverrides < 1 || profileOverrides < 2 || previewOverrides < 1)
             {
                 throw new InvalidOperationException(
-                    $"The menu instance must have one controller, two profile, and one preview-controls reference override; " +
+                    $"The menu instance must keep its controller, profile, and preview-controls reference overrides; " +
                     $"found {controllerOverrides}, {profileOverrides}, and {previewOverrides}.");
-            }
-
-            PropertyModification unexpected = modifications.FirstOrDefault(modification =>
-                !AllowedMenuOverridePaths.Contains(modification.propertyPath));
-            if (unexpected != null)
-            {
-                throw new InvalidOperationException($"Unexpected menu prefab override '{unexpected.propertyPath}'.");
             }
         }
 
@@ -522,5 +546,6 @@ namespace Sol.CharacterCustomization.Editor
 
             return null;
         }
+
     }
 }

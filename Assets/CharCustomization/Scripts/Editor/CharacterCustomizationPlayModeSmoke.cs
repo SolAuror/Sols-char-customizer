@@ -88,9 +88,12 @@ namespace Sol.CharacterCustomization.Editor
 
                 preview.SnapToFocus();
                 Bounds bounds = CombineBounds(controller.ActiveCharacterRoot);
-                Vector3 directionToFocus = (bounds.center - preview.PreviewCamera.transform.position).normalized;
-                Require(Vector3.Dot(preview.PreviewCamera.transform.forward, directionToFocus) > 0.999f,
-                    "The native preview camera is not focused on the active character bounds.");
+                var serializedPreview = new UnityEditor.SerializedObject(preview);
+                Vector2 viewportFocus = serializedPreview.FindProperty("viewportFocus").vector2Value;
+                Vector3 viewportPoint = preview.PreviewCamera.WorldToViewportPoint(bounds.center);
+                Require(Mathf.Abs(viewportPoint.x - viewportFocus.x) < 0.03f &&
+                        Mathf.Abs(viewportPoint.y - viewportFocus.y) < 0.03f,
+                    "The native preview camera is not framing the active character in the configured viewport space.");
 
                 string savePath = Path.Combine(directory, "players.json");
                 Directory.CreateDirectory(directory);

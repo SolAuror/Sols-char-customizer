@@ -19,23 +19,6 @@ namespace Sol.CharacterCustomization.Editor
         private const string DemoPresetPath = "Assets/CharCustomization/Presets/DemoPreset.asset";
         private const string PresetLibraryPath = "Assets/CharCustomization/Presets/PresetLibrary.asset";
 
-        private static readonly string[] TabOrder =
-        {
-            "Presets", "Skin", "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
-        };
-
-        private static readonly HashSet<string> AllowedSceneMenuOverrides = new(StringComparer.Ordinal)
-        {
-            "controller", "profile", "previewControls", "m_Name",
-            "m_Pivot.x", "m_Pivot.y", "m_AnchorMax.x", "m_AnchorMax.y",
-            "m_AnchorMin.x", "m_AnchorMin.y", "m_SizeDelta.x", "m_SizeDelta.y",
-            "m_LocalScale.x", "m_LocalScale.y", "m_LocalScale.z",
-            "m_LocalPosition.x", "m_LocalPosition.y", "m_LocalPosition.z",
-            "m_LocalRotation.w", "m_LocalRotation.x", "m_LocalRotation.y", "m_LocalRotation.z",
-            "m_AnchoredPosition.x", "m_AnchoredPosition.y",
-            "m_LocalEulerAnglesHint.x", "m_LocalEulerAnglesHint.y", "m_LocalEulerAnglesHint.z"
-        };
-
         private static readonly CharacterSkinTone[] DefaultTones =
         {
             new("porcelain", "Porcelain", Hex("F6D2B8")),
@@ -49,12 +32,6 @@ namespace Sol.CharacterCustomization.Editor
         };
 
         private static bool running;
-
-        [InitializeOnLoadMethod]
-        private static void QueueSetup()
-        {
-            EditorApplication.delayCall += RunIfRequired;
-        }
 
         [MenuItem("Tools/Character Customization/Setup Finalization Flow")]
         public static void Run()
@@ -79,35 +56,6 @@ namespace Sol.CharacterCustomization.Editor
             finally
             {
                 running = false;
-            }
-        }
-
-        private static void RunIfRequired()
-        {
-            if (running || EditorApplication.isCompiling || EditorApplication.isUpdating ||
-                EditorApplication.isPlayingOrWillChangePlaymode)
-            {
-                return;
-            }
-
-            GameObject menuPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MenuPrefabPath);
-            GameObject managerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ManagerPrefabPath);
-            CharacterMorphDemoUI menu = menuPrefab != null ? menuPrefab.GetComponent<CharacterMorphDemoUI>() : null;
-            CharacterProfile profile = managerPrefab != null ? managerPrefab.GetComponent<CharacterProfile>() : null;
-            CharacterFinalizationFlow flow = menuPrefab != null ? menuPrefab.GetComponent<CharacterFinalizationFlow>() : null;
-            if (menu == null || profile == null || flow == null)
-            {
-                Run();
-                return;
-            }
-
-            var serializedMenu = new SerializedObject(menu);
-            Button resetButton = serializedMenu.FindProperty("resetGroupButton").objectReferenceValue as Button;
-            if (serializedMenu.FindProperty("skinPanel").objectReferenceValue == null ||
-                serializedMenu.FindProperty("tabButtons").arraySize != TabOrder.Length ||
-                resetButton == null || resetButton.GetComponent<RectTransform>().anchoredPosition.y < 100f)
-            {
-                Run();
             }
         }
 
@@ -162,6 +110,14 @@ namespace Sol.CharacterCustomization.Editor
                 serializedProfile.FindProperty("skinPalette").objectReferenceValue = palette;
                 serializedProfile.ApplyModifiedPropertiesWithoutUndo();
 
+                CharacterPreviewControls preview = root.GetComponent<CharacterPreviewControls>();
+                if (preview != null)
+                {
+                    var serializedPreview = new SerializedObject(preview);
+                    serializedPreview.FindProperty("viewportFocus").vector2Value = new Vector2(0.66f, 0.5f);
+                    serializedPreview.ApplyModifiedPropertiesWithoutUndo();
+                }
+
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, ManagerPrefabPath);
                 if (saved == null)
                 {
@@ -198,13 +154,15 @@ namespace Sol.CharacterCustomization.Editor
                 FooterUi footer = EnsureFooter(root, slider, presetPanel, skinUi.Panel, buttonTemplate);
 
                 CharacterMorphTabButton[] tabs = root.GetComponentsInChildren<CharacterMorphTabButton>(true);
-                var orderedTabs = new CharacterMorphTabButton[TabOrder.Length];
-                for (int index = 0; index < TabOrder.Length; index++)
+                IReadOnlyList<string> tabOrder = CharacterCustomizationUiConfig.TabGroups;
+                var orderedTabs = new CharacterMorphTabButton[tabOrder.Count];
+                for (int index = 0; index < tabOrder.Count; index++)
                 {
-                    orderedTabs[index] = tabs.FirstOrDefault(tab => tab.GroupId == TabOrder[index]);
+                    string groupId = tabOrder[index];
+                    orderedTabs[index] = tabs.FirstOrDefault(tab => tab.GroupId == groupId);
                     if (orderedTabs[index] == null)
                     {
-                        throw new InvalidOperationException($"Missing authored tab '{TabOrder[index]}'.");
+                        throw new InvalidOperationException($"Missing authored tab '{groupId}'.");
                     }
 
                     orderedTabs[index].transform.SetSiblingIndex(index);
@@ -249,6 +207,7 @@ namespace Sol.CharacterCustomization.Editor
                 SetObject(serializedFlow, "customizationInterface", root);
                 serializedFlow.ApplyModifiedPropertiesWithoutUndo();
 
+                ConfigureRaycastTargets(root);
                 skinUi.Panel.SetActive(false);
                 skinUi.CustomPanel.SetActive(false);
                 GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, MenuPrefabPath);
@@ -266,21 +225,21 @@ namespace Sol.CharacterCustomization.Editor
         private static CharacterMorphTabButton EnsureSkinTab(GameObject root, Transform parent)
         {
             CharacterMorphTabButton existing = root.GetComponentsInChildren<CharacterMorphTabButton>(true)
-                .FirstOrDefault(tab => tab.GroupId == "Skin");
+                .FirstOrDefault(tab => tab.GroupId == CharacterCustomizationUiConfig.SkinGroupId);
             if (existing != null)
             {
                 return existing;
             }
 
             CharacterMorphTabButton template = root.GetComponentsInChildren<CharacterMorphTabButton>(true)
-                .First(tab => tab.GroupId == "Body");
+                .First(tab => tab.GroupId == CharacterCustomizationUiConfig.DefaultMorphGroupId);
             GameObject clone = UnityEngine.Object.Instantiate(template.gameObject, parent);
             clone.name = "Skin Tab";
             var tab = clone.GetComponent<CharacterMorphTabButton>();
             var serializedTab = new SerializedObject(tab);
-            serializedTab.FindProperty("groupId").stringValue = "Skin";
+            serializedTab.FindProperty("groupId").stringValue = CharacterCustomizationUiConfig.SkinGroupId;
             serializedTab.ApplyModifiedPropertiesWithoutUndo();
-            tab.Label.text = "Skin";
+            tab.Label.text = CharacterCustomizationUiConfig.SkinGroupId;
             return tab;
         }
 
@@ -388,9 +347,15 @@ namespace Sol.CharacterCustomization.Editor
             Button buttonTemplate)
         {
             GameObject existing = FindObject(root, "Finalization Footer");
-            if (existing != null)
+            if (existing != null && IsFooterComplete(existing))
             {
                 return ReadFooter(existing);
+            }
+
+            FooterUi movedFooter = ReadMovedFooter(root);
+            if (movedFooter.IsComplete)
+            {
+                return movedFooter;
             }
 
             RectTransform sliderRect = slider.GetComponent<RectTransform>();
@@ -446,10 +411,50 @@ namespace Sol.CharacterCustomization.Editor
             TMP_Text status = CreateText(footer.transform, "Finalization Status", string.Empty, 17f, 24f);
             status.color = new Color(0.65f, 0.9f, 0.7f, 1f);
 
-            ShrinkForFooter(sliderRect);
-            ShrinkForFooter(presetPanel.GetComponent<RectTransform>());
-            ShrinkForFooter(skinPanel.GetComponent<RectTransform>());
             return new FooterUi(input, randomize, finalize, finalizeLabel, status);
+        }
+
+        private static bool IsFooterComplete(GameObject footer)
+        {
+            return FindComponent<TMP_InputField>(footer, "Character Name Input") != null &&
+                   FindComponent<Button>(footer, "Randomize Button") != null &&
+                   FindComponent<Button>(footer, "Finalize Button") != null &&
+                   FindComponent<TMP_Text>(footer, "Finalization Status") != null &&
+                   FindObject(footer, "Finalization Actions") != null;
+        }
+
+        private static FooterUi ReadMovedFooter(GameObject root)
+        {
+            TMP_InputField input = FindComponent<TMP_InputField>(root, "Character Name Input");
+            Button randomize = FindComponent<Button>(root, "Randomize Button");
+            Button finalize = FindComponent<Button>(root, "Finalize Button") ??
+                              FindComponent<Button>(root, "Confirm Button");
+            TMP_Text status = FindComponent<TMP_Text>(root, "Finalization Status") ??
+                              FindComponent<TMP_Text>(root, "SystemMessages");
+            TMP_Text finalizeLabel = finalize != null ? finalize.GetComponentInChildren<TMP_Text>(true) : null;
+            return new FooterUi(input, randomize, finalize, finalizeLabel, status);
+        }
+
+        private static void ConfigureRaycastTargets(GameObject root)
+        {
+            ScrollRect[] scrollRects = root.GetComponentsInChildren<ScrollRect>(true);
+            foreach (Graphic graphic in root.GetComponentsInChildren<Graphic>(true))
+            {
+                bool belongsToControl = graphic.GetComponentInParent<Selectable>(true) != null;
+                bool belongsToScrollSurface = false;
+                foreach (ScrollRect scrollRect in scrollRects)
+                {
+                    if (scrollRect.GetComponent<Graphic>() == graphic ||
+                        (scrollRect.viewport != null && scrollRect.viewport.GetComponent<Graphic>() == graphic))
+                    {
+                        belongsToScrollSurface = true;
+                        break;
+                    }
+                }
+
+                bool belongsToMask = graphic.GetComponent<Mask>() != null || graphic.GetComponent<RectMask2D>() != null;
+                graphic.raycastTarget = belongsToControl || belongsToScrollSurface || belongsToMask;
+            }
         }
 
         private static FooterUi ReadFooter(GameObject footer)
@@ -487,6 +492,7 @@ namespace Sol.CharacterCustomization.Editor
                 serializedProfile.ApplyModifiedPropertiesWithoutUndo();
 
                 var serializedMenu = new SerializedObject(menu);
+                SetObject(serializedMenu, "controller", controller);
                 SetObject(serializedMenu, "profile", profile);
                 serializedMenu.ApplyModifiedPropertiesWithoutUndo();
 
@@ -495,8 +501,6 @@ namespace Sol.CharacterCustomization.Editor
                 SetObject(serializedFlow, "demoUI", menu);
                 SetObject(serializedFlow, "previewControls", preview);
                 serializedFlow.ApplyModifiedPropertiesWithoutUndo();
-
-                CleanMenuOverrides(menu);
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
@@ -521,22 +525,6 @@ namespace Sol.CharacterCustomization.Editor
                 .Where(target => target.sharedMaterials.Any(material =>
                     material != null && string.Equals(material.name, materialName, StringComparison.Ordinal)))
                 .ToArray();
-        }
-
-        private static void CleanMenuOverrides(CharacterMorphDemoUI menu)
-        {
-            GameObject instanceRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(menu.gameObject);
-            PropertyModification[] modifications = PrefabUtility.GetPropertyModifications(instanceRoot) ??
-                                                   Array.Empty<PropertyModification>();
-            PropertyModification[] retained = modifications
-                .Where(modification =>
-                    modification.propertyPath == "controller" ||
-                    modification.propertyPath == "profile" ||
-                    modification.propertyPath == "previewControls" ||
-                    ((modification.target == instanceRoot || modification.target == instanceRoot.transform) &&
-                     AllowedSceneMenuOverrides.Contains(modification.propertyPath)))
-                .ToArray();
-            PrefabUtility.SetPropertyModifications(instanceRoot, retained);
         }
 
         private static void AssignRenderers(SerializedProperty property, Renderer[] renderers)
@@ -604,12 +592,6 @@ namespace Sol.CharacterCustomization.Editor
             }
             layout.preferredHeight = 48f;
             return button;
-        }
-
-        private static void ShrinkForFooter(RectTransform rect)
-        {
-            rect.sizeDelta = new Vector2(rect.sizeDelta.x, rect.sizeDelta.y - 100f);
-            rect.anchoredPosition += Vector2.up * 50f;
         }
 
         private static void CopyRect(RectTransform source, RectTransform destination)
@@ -712,6 +694,7 @@ namespace Sol.CharacterCustomization.Editor
             public Button Finalize { get; }
             public TMP_Text FinalizeLabel { get; }
             public TMP_Text Status { get; }
+            public bool IsComplete => NameInput != null && Randomize != null && Finalize != null && Status != null;
         }
     }
 }

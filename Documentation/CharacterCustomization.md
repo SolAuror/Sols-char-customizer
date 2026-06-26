@@ -25,14 +25,27 @@ Each morph row explicitly stores its logical identifier and UI references. Runti
 
 The character preview uses left-drag to rotate the visible character, the mouse wheel to zoom, and right-drag to move the focus point vertically. `CharacterPreviewControls` continually frames the active renderer bounds and exposes native position/rotation damping. It can blend its transform and field of view into an optional gameplay camera without a Cinemachine dependency.
 
-`CharacterRecipe` is the versioned shared appearance payload: sex, skin selection or custom colour, and all morph values in stable ID order. `CharacterPreset` stores that recipe as an authored ScriptableObject. `CharacterProfile` applies presets to NPCs or accepts a runtime recipe for players and other spawned characters.
+`CharacterRecipe` is the versioned shared appearance payload: sex, skin selection or custom colour, and all morph values in stable ID order. `CharacterPreset` stores read-only authored starter recipes as ScriptableObjects, while runtime-created presets are saved to JSON. `CharacterProfile` applies presets to NPCs or accepts a runtime recipe for players and other spawned characters.
 
 The fixed footer accepts a character name, randomizes the current sex within restrained morph ranges, and finalizes the visible recipe. Finalized players are stored in `Application.persistentDataPath/SolCharacterCustomization/players.json`. The file supports multiple records with stable IDs; replacing a case-insensitive name requires an explicit second click.
+
+Runtime presets are stored in `Application.persistentDataPath/SolCharacterCustomization/presets.json` through `CharacterPresetSaveRepository`. They use the same explicit overwrite pattern as finalized players. The menu merges authored presets and saved presets in one dropdown, labelling the source as Authored or Saved.
 
 ```csharp
 CharacterRecipe npcRecipe = npcProfile.CaptureRecipe();
 playerProfile.ApplyRecipe(savedPlayer.Recipe);
 npcProfile.ApplyPreset(authoredNpcPreset);
+```
+
+Host games can keep the default JSON files, subscribe to the menu and finalization events, or replace persistence with game-owned repositories:
+
+```csharp
+menu.SetPresetRepository(customPresetRepository);
+menu.RuntimePresetSaved += savedPreset => AppendToGameSave(savedPreset.Recipe);
+menu.PresetLoaded += (name, recipe) => TrackPresetUse(name);
+
+finalization.SetPlayerSaveRepository(customPlayerRepository);
+finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
 ```
 
 ## Design Principles
@@ -41,7 +54,7 @@ npcProfile.ApplyPreset(authoredNpcPreset);
 - Record accepted decisions, rejected approaches, and unresolved questions as the design develops.
 
 ## Decisions
-- Female is the default character in the demo.
+- The default character sex is centralized in `CharacterCustomizationUiConfig`.
 - Male and female recipes remain independent during the current session.
 - Runtime code addresses morphs by stable identifiers rather than FBX blendshape names.
 - Morph behaviour uses inheritance and polymorphism: the controller delegates range, shape, and weight rules to the concrete morph definition.
@@ -50,20 +63,22 @@ npcProfile.ApplyPreset(authoredNpcPreset);
 - Runtime UI creation is limited to cloning a missing morph row from the assigned template.
 - Switching tabs preserves the selected category across character changes and returns the slider list to the top.
 - Reset clears only the visible character's recipe through `ResetCurrentCharacter()` and immediately refreshes the current sliders. The other character's recipe is unchanged.
-- Presets store the complete versioned recipe. Missing known morphs load as zero, while unknown IDs are ignored with a warning.
+- Authored and runtime presets store the complete versioned recipe. Missing known morphs load as zero, while unknown IDs are ignored with a warning.
 - Character names belong to player records rather than reusable appearance recipes.
 - Randomize preserves name and sex, uses 65 percent of each morph's legal range, and selects only authored skin tones.
 - Authored skin swatches use stable IDs. A custom HSV colour is stored as an RGBA recipe override.
 - `CharacterProfile` is the common application boundary for authored NPC presets and player-save recipes.
 - Finalization stores multiple players in one JSON file and preserves record IDs when explicitly overwriting a duplicate name.
+- Runtime presets store multiple saved appearances in one JSON file and preserve record IDs when explicitly overwriting a duplicate name.
 - Gameplay-camera and controller references are optional. When assigned, finalization performs a native smooth handoff; otherwise the saved demo remains interactive.
 - Reset All is contained in the Presets tab and clears every morph on the visible character. Each morph tab exposes a fixed Reset control that clears only that tab's group.
-- `Tools > Character Customization > Validate Morph Demo` checks the ten tabs, skin palette and renderer bindings, profile/finalization wiring, character morphs, scene wiring, and UI input references without rebuilding assets.
-- ScriptableObject presets are authoring assets rather than player save files. A build can load them, but Save changes remain in memory only for that player session.
+- `Tools > Character Customization > Validate Morph Demo` checks the centralized tab list, skin palette and renderer bindings, profile/finalization wiring, character morphs, scene wiring, and UI input references without rebuilding assets.
+- ScriptableObject presets are authoring assets rather than player save files. User-saved presets persist through `CharacterPresetSaveRepository`.
+- Editor setup tools are explicit menu actions. They no longer auto-run on editor reload, so designer prefab edits are not silently rewritten.
 - Game-specific progression, eye colour, hair, and clothing remain outside the current iteration.
 
 ## Validation Checkpoint
-The earlier tabbed-menu iteration was validated in Unity 6000.3.9f1 on 24 June 2026. The finalization iteration adds Edit Mode coverage for recipe JSON, multiple-player persistence, duplicate overwrite handling, malformed files, and restrained randomization, plus validator and Play Mode checks for the authored profile, skin, footer, and camera wiring.
+The earlier tabbed-menu iteration was validated in Unity 6000.3.9f1 on 24 June 2026. The finalization and runtime-preset iterations add Edit Mode coverage for recipe JSON, multiple-player persistence, runtime-preset persistence, duplicate overwrite handling, malformed files, and restrained randomization, plus validator and Play Mode checks for the authored profile, skin, footer, and camera wiring.
 
 ## Next Steps
 1. Replace the hardcoded MPFB catalogue and male/female assumptions with serialized morph profiles and character-variant bindings while preserving stable logical identifiers.

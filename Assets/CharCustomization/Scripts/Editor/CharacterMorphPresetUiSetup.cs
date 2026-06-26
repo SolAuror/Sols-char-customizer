@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEditor;
@@ -11,18 +12,6 @@ namespace Sol.CharacterCustomization.Editor
     {
         private const string MenuPrefabPath = "Assets/CharCustomization/Prefabs/CharacterMorphMenu.prefab";
         private const string PresetLibraryPath = "Assets/CharCustomization/Presets/PresetLibrary.asset";
-        private static readonly string[] MorphGroups =
-        {
-            "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
-        };
-
-        [InitializeOnLoadMethod]
-        private static void ScheduleSetup()
-        {
-            EditorApplication.delayCall += RunIfRequired;
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-        }
-
         [MenuItem("Tools/Character Customization/Setup Preset Tab")]
         public static void Run()
         {
@@ -80,7 +69,11 @@ namespace Sol.CharacterCustomization.Editor
                 TMP_Dropdown dropdown = CreatePresetDropdown(presetPanel.transform);
                 GameObject buttonRow = CreateButtonRow(presetPanel.transform);
 
-                Button groupResetButton = CloneButton(oldResetButton, panelParent, "Reset Tab Button", "Reset Body");
+                Button groupResetButton = CloneButton(
+                    oldResetButton,
+                    panelParent,
+                    "Reset Tab Button",
+                    $"Reset {CharacterCustomizationUiConfig.DefaultMorphGroupId}");
                 ConfigureFixedButton(groupResetButton.GetComponent<RectTransform>());
                 TMP_Text groupResetLabel = groupResetButton.GetComponentInChildren<TMP_Text>(true);
 
@@ -121,61 +114,22 @@ namespace Sol.CharacterCustomization.Editor
             Debug.Log("Character morph preset tab setup completed.");
         }
 
-        private static void RunIfRequired()
-        {
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating ||
-                EditorApplication.isPlayingOrWillChangePlaymode)
-            {
-                return;
-            }
-
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MenuPrefabPath);
-            CharacterMorphDemoUI menu = prefab != null ? prefab.GetComponent<CharacterMorphDemoUI>() : null;
-            if (menu == null)
-            {
-                return;
-            }
-
-            var serializedMenu = new SerializedObject(menu);
-            SerializedProperty presetPanel = serializedMenu.FindProperty("presetPanel");
-            if (presetPanel != null && presetPanel.objectReferenceValue != null)
-            {
-                return;
-            }
-
-            try
-            {
-                Run();
-            }
-            catch (Exception exception)
-            {
-                Debug.LogException(exception);
-            }
-        }
-
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.EnteredEditMode)
-            {
-                EditorApplication.delayCall += RunIfRequired;
-            }
-        }
-
         private static void ConfigurePresetTab(
             GameObject root,
             CharacterMorphTabButton presetTab,
             SerializedObject serializedMenu)
         {
             var serializedTab = new SerializedObject(presetTab);
-            serializedTab.FindProperty("groupId").stringValue = "Presets";
+            serializedTab.FindProperty("groupId").stringValue = CharacterCustomizationUiConfig.PresetsGroupId;
             serializedTab.ApplyModifiedPropertiesWithoutUndo();
 
             CharacterMorphTabButton[] allTabs = root.GetComponentsInChildren<CharacterMorphTabButton>(true);
-            var orderedTabs = new CharacterMorphTabButton[MorphGroups.Length + 1];
+            IReadOnlyList<string> morphGroups = CharacterCustomizationUiConfig.MorphGroups;
+            var orderedTabs = new CharacterMorphTabButton[morphGroups.Count + 1];
             orderedTabs[0] = presetTab;
-            for (int index = 0; index < MorphGroups.Length; index++)
+            for (int index = 0; index < morphGroups.Count; index++)
             {
-                string group = MorphGroups[index];
+                string group = morphGroups[index];
                 orderedTabs[index + 1] = allTabs.FirstOrDefault(tab =>
                     tab != presetTab && string.Equals(tab.GroupId, group, StringComparison.Ordinal));
                 if (orderedTabs[index + 1] == null)

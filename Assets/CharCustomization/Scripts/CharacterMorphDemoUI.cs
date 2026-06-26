@@ -21,6 +21,7 @@ namespace Sol.CharacterCustomization
         [SerializeField] private RectTransform tabRailContent;
         [SerializeField] private ScrollRect mainSliderScrollRect;
         [SerializeField] private CharacterPresetLibrary presetLibrary;
+        [SerializeField] private string presetSavePathOverride;
         [SerializeField] private GameObject presetPanel;
         [SerializeField] private TMP_InputField presetNameInput;
         [SerializeField] private TMP_Dropdown presetDropdown;
@@ -44,14 +45,21 @@ namespace Sol.CharacterCustomization
         private readonly Dictionary<string, CharacterMorphSliderRow> rows = new(StringComparer.Ordinal);
         private readonly Dictionary<CharacterMorphTabButton, UnityAction> tabListeners = new();
         private readonly Dictionary<CharacterSkinSwatchButton, UnityAction> skinListeners = new();
-        private readonly List<CharacterPreset> availablePresets = new();
+        private readonly List<PresetOption> availablePresets = new();
+        private ICharacterPresetSaveRepository presetRepository;
+        private string pendingPresetOverwriteName;
         private bool initialized;
         private bool listenersRegistered;
         private bool refreshingSkin;
-        private string selectedGroup = "Body";
+        private string selectedGroup = CharacterCustomizationUiConfig.DefaultMorphGroupId;
 
         private static readonly Color AccentColor = new(0.82f, 0.73f, 0.55f, 1f);
         private static readonly Color InactiveColor = new(0.27f, 0.27f, 0.27f, 1f);
+
+        public event Action<RuntimeCharacterPresetRecord> RuntimePresetSaved;
+        public event Action<string, CharacterRecipe> PresetLoaded;
+
+        public ICharacterPresetSaveRepository PresetRepository => presetRepository;
 
         private void Start()
         {
@@ -118,6 +126,69 @@ namespace Sol.CharacterCustomization
             return row;
         }
 
+        public void SetPresetRepository(ICharacterPresetSaveRepository repository)
+        {
+            presetRepository = repository;
+            if (initialized)
+            {
+                RefreshPresetOptions();
+            }
+        }
+
+        public bool TrySaveCurrentPreset(
+            string presetName,
+            bool overwriteExisting,
+            out RuntimeCharacterPresetRecord savedRecord,
+            out bool duplicateName,
+            out string error)
+        {
+            EnsurePresetRepository();
+            savedRecord = null;
+            duplicateName = false;
+
+            if (profile == null)
+            {
+                error = "The character profile is not assigned.";
+                return false;
+            }
+
+            CharacterRecipe recipe = profile.CaptureRecipe();
+            if (!presetRepository.TrySavePreset(
+                    presetName,
+                    recipe,
+                    overwriteExisting,
+                    out savedRecord,
+                    out duplicateName,
+                    out error))
+            {
+                return false;
+            }
+
+            RuntimePresetSaved?.Invoke(savedRecord);
+            return true;
+        }
+
+        public bool TryApplyPresetRecipe(string presetName, CharacterRecipe recipe, out string error)
+        {
+            if (profile == null || recipe == null)
+            {
+                error = "A character profile and recipe are required before a preset can be loaded.";
+                return false;
+            }
+
+            if (!profile.ApplyRecipe(recipe))
+            {
+                error = $"Preset '{presetName}' could not be applied.";
+                return false;
+            }
+
+            presetNameInput?.SetTextWithoutNotify(presetName);
+            RefreshPanel();
+            PresetLoaded?.Invoke(presetName, recipe);
+            error = null;
+            return true;
+        }
+
         public void RefreshPanel()
         {
             if (!initialized)
@@ -181,7 +252,8 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            selectedGroup = "Body";
+            selectedGroup = CharacterCustomizationUiConfig.DefaultMorphGroupId;
+            EnsurePresetRepository();
             CacheAuthoredRows();
 
             foreach (CharacterMorphDefinition definition in controller.Definitions)
@@ -196,44 +268,157 @@ namespace Sol.CharacterCustomization
             RefreshPresetOptions();
             customColorPanel.SetActive(false);
             RegisterListeners();
-            controller.SetSex(CharacterSex.Female);
+            controller.SetSex(controller.ActiveSex);
             ApplySelectedGroup(false);
             RefreshPanel();
         }
 
         private bool HasRequiredReferences()
         {
-            return controller != null &&
-                   profile != null &&
-                   content != null &&
-                   femaleButton != null &&
-                   maleButton != null &&
-                   femaleButtonImage != null &&
-                   maleButtonImage != null &&
-                   sliderRowTemplate != null &&
-                   tabRailScrollRect != null &&
-                   tabRailContent != null &&
-                   mainSliderScrollRect != null &&
-                   presetLibrary != null &&
-                   presetPanel != null &&
-                   presetNameInput != null &&
-                   presetDropdown != null &&
-                   savePresetButton != null &&
-                   loadPresetButton != null &&
-                   resetAllButton != null &&
-                   resetGroupButton != null &&
-                   resetGroupButtonLabel != null &&
-                   skinPanel != null &&
-                   skinSwatches != null &&
-                   skinSwatches.Length > 0 &&
-                   customColorToggleButton != null &&
-                   customColorPanel != null &&
-                   hueSlider != null &&
-                   saturationSlider != null &&
-                   valueSlider != null &&
-                   customColorPreview != null &&
-                   tabButtons != null &&
-                   tabButtons.Length == 10;
+            var errors = new List<string>();
+            AddMissing(errors, controller == null, "controller");
+            AddMissing(errors, profile == null, "profile");
+            AddMissing(errors, content == null, "content");
+            AddMissing(errors, femaleButton == null, "femaleButton");
+            AddMissing(errors, maleButton == null, "maleButton");
+            AddMissing(errors, femaleButtonImage == null, "femaleButtonImage");
+            AddMissing(errors, maleButtonImage == null, "maleButtonImage");
+            AddMissing(errors, sliderRowTemplate == null, "sliderRowTemplate");
+            AddMissing(errors, tabRailScrollRect == null, "tabRailScrollRect");
+            AddMissing(errors, tabRailContent == null, "tabRailContent");
+            AddMissing(errors, mainSliderScrollRect == null, "mainSliderScrollRect");
+            AddMissing(errors, presetLibrary == null, "presetLibrary");
+            AddMissing(errors, presetPanel == null, "presetPanel");
+            AddMissing(errors, presetNameInput == null, "presetNameInput");
+            AddMissing(errors, presetDropdown == null, "presetDropdown");
+            AddMissing(errors, savePresetButton == null, "savePresetButton");
+            AddMissing(errors, loadPresetButton == null, "loadPresetButton");
+            AddMissing(errors, resetAllButton == null, "resetAllButton");
+            AddMissing(errors, resetGroupButton == null, "resetGroupButton");
+            AddMissing(errors, resetGroupButtonLabel == null, "resetGroupButtonLabel");
+            AddMissing(errors, skinPanel == null, "skinPanel");
+            AddMissing(errors, customColorToggleButton == null, "customColorToggleButton");
+            AddMissing(errors, customColorPanel == null, "customColorPanel");
+            AddMissing(errors, hueSlider == null, "hueSlider");
+            AddMissing(errors, saturationSlider == null, "saturationSlider");
+            AddMissing(errors, valueSlider == null, "valueSlider");
+            AddMissing(errors, customColorPreview == null, "customColorPreview");
+            ValidateSkinSwatches(errors);
+            ValidateTabs(errors);
+
+            if (errors.Count > 0)
+            {
+                Debug.LogError($"The character morph UI has incomplete references: {string.Join("; ", errors)}", this);
+                return false;
+            }
+
+            return true;
+        }
+
+        private void EnsurePresetRepository()
+        {
+            presetRepository ??= new CharacterPresetSaveRepository(presetSavePathOverride);
+        }
+
+        private static void AddMissing(List<string> errors, bool missing, string label)
+        {
+            if (missing)
+            {
+                errors.Add(label);
+            }
+        }
+
+        private void ValidateSkinSwatches(List<string> errors)
+        {
+            if (skinSwatches == null || skinSwatches.Length == 0)
+            {
+                errors.Add("skinSwatches has no entries");
+                return;
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int index = 0; index < skinSwatches.Length; index++)
+            {
+                CharacterSkinSwatchButton swatch = skinSwatches[index];
+                if (swatch == null)
+                {
+                    errors.Add($"skinSwatches[{index}] is unassigned");
+                    continue;
+                }
+
+                if (!swatch.IsConfigured)
+                {
+                    errors.Add($"skinSwatches[{index}] '{swatch.name}' is incomplete");
+                    continue;
+                }
+
+                if (!ids.Add(swatch.SkinToneId))
+                {
+                    errors.Add($"skinSwatches contains duplicate tone '{swatch.SkinToneId}'");
+                }
+            }
+
+            CharacterSkinPalette palette = profile != null ? profile.SkinPalette : null;
+            if (palette == null)
+            {
+                return;
+            }
+
+            foreach (CharacterSkinTone tone in palette.Tones)
+            {
+                if (tone != null && !ids.Contains(tone.Id))
+                {
+                    errors.Add($"skinSwatches is missing palette tone '{tone.Id}'");
+                }
+            }
+        }
+
+        private void ValidateTabs(List<string> errors)
+        {
+            IReadOnlyList<string> expectedTabs = CharacterCustomizationUiConfig.TabGroups;
+            if (tabButtons == null)
+            {
+                errors.Add("tabButtons is unassigned");
+                return;
+            }
+
+            if (tabButtons.Length != expectedTabs.Count)
+            {
+                errors.Add($"tabButtons has {tabButtons.Length} entries but {expectedTabs.Count} are required");
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (int index = 0; index < tabButtons.Length; index++)
+            {
+                CharacterMorphTabButton tab = tabButtons[index];
+                if (tab == null)
+                {
+                    errors.Add($"tabButtons[{index}] is unassigned");
+                    continue;
+                }
+
+                if (!tab.IsConfigured)
+                {
+                    errors.Add($"tabButtons[{index}] '{tab.name}' is incomplete");
+                    continue;
+                }
+
+                if (!ids.Add(tab.GroupId))
+                {
+                    errors.Add($"tabButtons contains duplicate group '{tab.GroupId}'");
+                }
+
+                if (!CharacterCustomizationUiConfig.IsKnownGroup(tab.GroupId))
+                {
+                    errors.Add($"tabButtons[{index}] references unknown group '{tab.GroupId}'");
+                }
+
+                if (index < expectedTabs.Count &&
+                    !string.Equals(tab.GroupId, expectedTabs[index], StringComparison.Ordinal))
+                {
+                    errors.Add($"tabButtons[{index}] should be '{expectedTabs[index]}' but is '{tab.GroupId}'");
+                }
+            }
         }
 
         private void CacheAuthoredRows()
@@ -313,24 +498,38 @@ namespace Sol.CharacterCustomization
         private void SavePreset()
         {
             string presetName = presetNameInput.text.Trim();
-            if (string.IsNullOrEmpty(presetName))
+            bool confirmOverwrite = string.Equals(
+                pendingPresetOverwriteName,
+                presetName,
+                StringComparison.OrdinalIgnoreCase);
+
+            if (!TrySaveCurrentPreset(
+                    presetName,
+                    confirmOverwrite,
+                    out RuntimeCharacterPresetRecord savedPreset,
+                    out bool duplicateName,
+                    out string error))
             {
-                Debug.LogWarning("Enter a preset name before saving.", this);
+                if (duplicateName)
+                {
+                    pendingPresetOverwriteName = presetName;
+                    SetSavePresetButtonLabel("Confirm Overwrite");
+                    Debug.LogWarning(
+                        $"A saved preset named '{presetName}' already exists. Select Save Preset again to overwrite it.",
+                        this);
+                }
+                else
+                {
+                    ClearPresetOverwriteConfirmation();
+                    Debug.LogWarning(error, this);
+                }
+
                 return;
             }
 
-            CharacterPreset preset = presetLibrary.GetOrCreate(presetName);
-            CharacterRecipe recipe = profile.CaptureRecipe();
-            if (preset != null && recipe != null)
-            {
-                preset.Overwrite(recipe);
-#if UNITY_EDITOR
-                UnityEditor.EditorUtility.SetDirty(preset);
-                UnityEditor.AssetDatabase.SaveAssetIfDirty(preset);
-#endif
-                presetLibrary.MarkDirtyAndSave();
-                RefreshPresetOptions(preset);
-            }
+            ClearPresetOverwriteConfirmation();
+            presetNameInput.SetTextWithoutNotify(savedPreset.PresetName);
+            RefreshPresetOptions(savedPreset.Id);
         }
 
         private void LoadPreset()
@@ -342,23 +541,38 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            CharacterPreset preset = availablePresets[selectedIndex];
-            if (profile.ApplyPreset(preset))
+            PresetOption preset = availablePresets[selectedIndex];
+            if (!TryApplyPresetRecipe(preset.PresetName, preset.Recipe, out string error))
             {
-                presetNameInput.SetTextWithoutNotify(preset.DisplayName);
-                RefreshPanel();
+                Debug.LogWarning(error, this);
             }
         }
 
-        private void RefreshPresetOptions(CharacterPreset selectedPreset = null)
+        private void RefreshPresetOptions(string selectedRuntimePresetId = null)
         {
             availablePresets.Clear();
             foreach (CharacterPreset preset in presetLibrary.Presets)
             {
                 if (preset != null)
                 {
-                    availablePresets.Add(preset);
+                    availablePresets.Add(PresetOption.FromAuthored(preset));
                 }
+            }
+
+            EnsurePresetRepository();
+            if (presetRepository.TryLoad(out CharacterPresetSaveData savedData, out string error))
+            {
+                foreach (RuntimeCharacterPresetRecord preset in savedData.Presets)
+                {
+                    if (preset != null)
+                    {
+                        availablePresets.Add(PresetOption.FromRuntime(preset));
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning(error, this);
             }
 
             presetDropdown.ClearOptions();
@@ -374,9 +588,10 @@ namespace Sol.CharacterCustomization
             int selectedIndex = 0;
             for (int index = 0; index < availablePresets.Count; index++)
             {
-                CharacterPreset preset = availablePresets[index];
-                options.Add(preset.DisplayName);
-                if (preset == selectedPreset)
+                PresetOption preset = availablePresets[index];
+                options.Add(preset.OptionLabel);
+                if (preset.IsRuntime &&
+                    string.Equals(preset.RuntimeId, selectedRuntimePresetId, StringComparison.Ordinal))
                 {
                     selectedIndex = index;
                 }
@@ -403,8 +618,8 @@ namespace Sol.CharacterCustomization
 
         private void ApplySelectedGroup(bool resetScroll)
         {
-            bool showingPresets = selectedGroup == "Presets";
-            bool showingSkin = selectedGroup == "Skin";
+            bool showingPresets = CharacterCustomizationUiConfig.IsPresetGroup(selectedGroup);
+            bool showingSkin = CharacterCustomizationUiConfig.IsSkinGroup(selectedGroup);
             bool showingMorphs = !showingPresets && !showingSkin;
             presetPanel.SetActive(showingPresets);
             skinPanel.SetActive(showingSkin);
@@ -481,6 +696,7 @@ namespace Sol.CharacterCustomization
             loadPresetButton.onClick.AddListener(LoadPreset);
             resetAllButton.onClick.AddListener(ResetAll);
             resetGroupButton.onClick.AddListener(ResetSelectedGroup);
+            presetNameInput.onValueChanged.AddListener(OnPresetNameChanged);
             customColorToggleButton.onClick.AddListener(ToggleCustomColorPanel);
             hueSlider.onValueChanged.AddListener(OnCustomColorChanged);
             saturationSlider.onValueChanged.AddListener(OnCustomColorChanged);
@@ -528,6 +744,7 @@ namespace Sol.CharacterCustomization
             loadPresetButton.onClick.RemoveListener(LoadPreset);
             resetAllButton.onClick.RemoveListener(ResetAll);
             resetGroupButton.onClick.RemoveListener(ResetSelectedGroup);
+            presetNameInput.onValueChanged.RemoveListener(OnPresetNameChanged);
             customColorToggleButton.onClick.RemoveListener(ToggleCustomColorPanel);
             hueSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
             saturationSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
@@ -557,20 +774,29 @@ namespace Sol.CharacterCustomization
 
         private static bool IsKnownGroup(string groupId)
         {
-            if (groupId == "Presets" || groupId == "Skin")
-            {
-                return true;
-            }
+            return CharacterCustomizationUiConfig.IsKnownGroup(groupId);
+        }
 
-            foreach (CharacterMorphDefinition definition in CharacterMorphCatalog.Definitions)
-            {
-                if (definition.Group == groupId)
-                {
-                    return true;
-                }
-            }
+        private void OnPresetNameChanged(string _)
+        {
+            ClearPresetOverwriteConfirmation();
+        }
 
-            return false;
+        private void ClearPresetOverwriteConfirmation()
+        {
+            pendingPresetOverwriteName = null;
+            SetSavePresetButtonLabel("Save Preset");
+        }
+
+        private void SetSavePresetButtonLabel(string label)
+        {
+            TMP_Text buttonLabel = savePresetButton != null
+                ? savePresetButton.GetComponentInChildren<TMP_Text>(true)
+                : null;
+            if (buttonLabel != null)
+            {
+                buttonLabel.text = label;
+            }
         }
 
         private void SelectSkinTone(string toneId)
@@ -615,6 +841,49 @@ namespace Sol.CharacterCustomization
             }
 
             return int.MaxValue;
+        }
+
+        private sealed class PresetOption
+        {
+            private PresetOption(
+                string presetName,
+                string optionLabel,
+                CharacterRecipe recipe,
+                bool isRuntime,
+                string runtimeId)
+            {
+                PresetName = presetName;
+                OptionLabel = optionLabel;
+                Recipe = recipe;
+                IsRuntime = isRuntime;
+                RuntimeId = runtimeId;
+            }
+
+            public string PresetName { get; }
+            public string OptionLabel { get; }
+            public CharacterRecipe Recipe { get; }
+            public bool IsRuntime { get; }
+            public string RuntimeId { get; }
+
+            public static PresetOption FromAuthored(CharacterPreset preset)
+            {
+                return new PresetOption(
+                    preset.DisplayName,
+                    $"{preset.DisplayName} (Authored)",
+                    preset.Recipe,
+                    false,
+                    null);
+            }
+
+            public static PresetOption FromRuntime(RuntimeCharacterPresetRecord preset)
+            {
+                return new PresetOption(
+                    preset.PresetName,
+                    $"{preset.PresetName} (Saved)",
+                    preset.Recipe,
+                    true,
+                    preset.Id);
+            }
         }
     }
 }

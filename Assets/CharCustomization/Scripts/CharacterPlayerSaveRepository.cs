@@ -51,7 +51,21 @@ namespace Sol.CharacterCustomization
         }
     }
 
-    public sealed class CharacterPlayerSaveRepository
+    public interface ICharacterPlayerSaveRepository
+    {
+        string SavePath { get; }
+        bool TryLoad(out CharacterPlayerSaveData data, out string error);
+        bool TryFindByName(string playerName, out PlayerCharacterRecord record, out string error);
+        bool TrySavePlayer(
+            string playerName,
+            CharacterRecipe recipe,
+            bool overwriteExisting,
+            out PlayerCharacterRecord savedRecord,
+            out bool duplicateName,
+            out string error);
+    }
+
+    public sealed class CharacterPlayerSaveRepository : ICharacterPlayerSaveRepository
     {
         public const string SaveDirectoryName = "SolCharacterCustomization";
         public const string SaveFileName = "players.json";

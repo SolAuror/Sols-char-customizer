@@ -8,7 +8,7 @@ namespace Sol.CharacterCustomization
     {
         [SerializeField] private GameObject femaleRoot;
         [SerializeField] private GameObject maleRoot;
-        [SerializeField] private CharacterSex activeSex = CharacterSex.Female;
+        [SerializeField] private CharacterSex activeSex = CharacterCustomizationUiConfig.DefaultSex;
 
         private readonly Dictionary<CharacterSex, Dictionary<string, float>> recipes = new();
         private readonly Dictionary<CharacterSex, Dictionary<string, MorphBinding>> bindings = new();
@@ -24,7 +24,7 @@ namespace Sol.CharacterCustomization
         private void Awake()
         {
             Initialize();
-            SetSex(CharacterSex.Female);
+            SetSex(activeSex);
         }
 
         public void SetSex(CharacterSex sex)

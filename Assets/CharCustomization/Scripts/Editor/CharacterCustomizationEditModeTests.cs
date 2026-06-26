@@ -77,6 +77,36 @@ namespace Sol.CharacterCustomization.Editor.Tests
         }
 
         [Test]
+        public void PresetRepositoryStoresRuntimePresetsAndRequiresExplicitOverwrite()
+        {
+            string path = Path.Combine(testDirectory, "presets.json");
+            var repository = new CharacterPresetSaveRepository(path);
+
+            Assert.That(repository.TrySavePreset(
+                "Lean Build", CreateRecipe(-0.25f), false, out RuntimeCharacterPresetRecord first,
+                out bool duplicate, out string error), Is.True, error);
+            Assert.That(duplicate, Is.False);
+            Assert.That(repository.TrySavePreset(
+                "Heavy Build", CreateRecipe(0.45f), false, out _, out duplicate, out error), Is.True, error);
+
+            Assert.That(repository.TrySavePreset(
+                "lean build", CreateRecipe(0.3f), false, out _, out duplicate, out error), Is.False);
+            Assert.That(duplicate, Is.True);
+            Assert.That(repository.TrySavePreset(
+                "lean build", CreateRecipe(0.3f), true, out RuntimeCharacterPresetRecord overwritten,
+                out duplicate, out error), Is.True, error);
+            Assert.That(overwritten.Id, Is.EqualTo(first.Id));
+
+            Assert.That(repository.TryLoad(out CharacterPresetSaveData data, out error), Is.True, error);
+            Assert.That(data.Presets.Count, Is.EqualTo(2));
+            Assert.That(repository.TryFindByName("LEAN BUILD", out RuntimeCharacterPresetRecord found, out error),
+                Is.True, error);
+            Assert.That(found.Id, Is.EqualTo(first.Id));
+            Assert.That(found.Recipe.TryGetValue("body.weight", out float weight), Is.True);
+            Assert.That(weight, Is.EqualTo(0.3f).Within(0.0001f));
+        }
+
+        [Test]
         public void RepositoryRejectsMalformedJson()
         {
             string path = Path.Combine(testDirectory, "players.json");

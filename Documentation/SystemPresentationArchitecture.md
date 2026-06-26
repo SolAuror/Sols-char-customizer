@@ -26,7 +26,8 @@ flowchart LR
         Growth["StatGrowthDefinition<br/>stat to morph mapping"]
         Profile["CharacterProfile<br/>capture and apply recipes"]
         Recipe["CharacterRecipe<br/>sex, skin, stable morph values"]
-        Preset["CharacterPresetLibrary<br/>authored recipe assets"]
+        Preset["CharacterPresetLibrary<br/>authored starter recipes"]
+        RuntimePresets["Preset save repository<br/>runtime JSON presets"]
         Saves["Player save repository<br/>multiple JSON records"]
         Preview["CharacterPreviewControls<br/>native focus and blend"]
     end
@@ -42,7 +43,8 @@ flowchart LR
     Growth -->|"stable morph ID and mapped value"| Controller
     DemoUI <--> Rows
     DemoUI -->|"SetMorph, SetSex, Reset"| Controller
-    DemoUI -->|"Save and load"| Profile
+    DemoUI -->|"Load recipe"| Profile
+    DemoUI -->|"Save and load runtime presets"| RuntimePresets
     Finalize -->|"CaptureRecipe"| Profile
     Finalize --> Saves
     Finalize --> Preview
@@ -54,6 +56,7 @@ flowchart LR
     Controller <--> Recipes
     Profile <--> Recipe
     Profile <--> Preset
+    RuntimePresets <--> Recipe
     Profile --> Controller
     Controller --> Bindings
     Controller -->|"positive and negative weights"| Renderers
@@ -82,7 +85,7 @@ INITIALISE
 
     bind each authored UI row to its catalogue definition
     create a fallback row only when an authored row is missing
-    select Female and display the Body group
+    select the configured default sex and display the default morph group
 ```
 
 ### Apply a slider change
@@ -143,13 +146,14 @@ BODY FAT
 ```text
 SAVE PRESET
     read and trim the entered preset name
-    create a new named library entry or select the matching existing entry
     capture sex, skin and every catalogue morph in catalogue order
-    overwrite the CharacterPreset recipe
-    persist the ScriptableObject asset immediately when running in the Unity Editor
+    if the case-insensitive saved preset name already exists, require a second confirmation
+    atomically write the runtime preset list to presets.json
+    raise RuntimePresetSaved so host games can append their own save work
 
 LOAD PRESET
     select a named entry from the preset dropdown
+    use either an authored ScriptableObject preset or a saved runtime JSON preset
     reject empty or duplicate identifiers
     warn and ignore identifiers that are not in the catalogue
     apply the recipe through CharacterProfile
@@ -157,6 +161,7 @@ LOAD PRESET
     for each catalogue definition
         apply its stored value, or zero when it is missing
     refresh the visible sliders
+    raise PresetLoaded so host games can respond
 
 RESET TAB
     set only the selected morph group's values to zero
@@ -170,7 +175,8 @@ FINALIZE PLAYER
     if the case-insensitive name already exists, require a second confirmation
     atomically write the record list to players.json
     raise Finalized with the saved record
-    when a gameplay camera is assigned, blend the preview transform and FOV before enabling gameplay
+    validate optional gameplay handoff references before hiding the UI
+    when a valid gameplay camera is assigned, blend the preview transform and FOV before enabling gameplay
 ```
 
 ## Presentation Summary
@@ -180,8 +186,9 @@ FINALIZE PLAYER
 - Inheritance removes morph-type decisions from the controller: each definition owns its behaviour.
 - Stat-growth definitions connect normalized gameplay values to muscle and body-fat morphs without owning progression rules.
 - Male and female recipes are independent and remain in memory while switching.
-- One versioned recipe shape is shared by authored presets, NPC profiles and durable player records.
+- One versioned recipe shape is shared by authored presets, runtime presets, NPC profiles and durable player records.
 - Player names and stable record IDs live outside reusable appearance recipes.
+- Host games can replace preset/player repositories or subscribe to save/load events without changing the menu UI.
 - The preview camera stays dependency-free and hands off to an optional gameplay camera natively.
 - One catalogue contains model-specific naming differences in a predictable place.
 - Missing or incomplete bindings fail safely and can be reported by the validator.

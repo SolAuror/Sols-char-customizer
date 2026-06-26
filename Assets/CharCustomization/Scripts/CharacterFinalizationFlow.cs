@@ -28,7 +28,7 @@ namespace Sol.CharacterCustomization
         [Header("Testing")]
         [SerializeField] private string savePathOverride;
 
-        private CharacterPlayerSaveRepository repository;
+        private ICharacterPlayerSaveRepository repository;
         private string pendingOverwriteName;
         private bool listenersRegistered;
 
@@ -36,6 +36,7 @@ namespace Sol.CharacterCustomization
 
         public Camera GameplayCamera => gameplayCamera;
         public Behaviour GameplayController => gameplayController;
+        public ICharacterPlayerSaveRepository Repository => repository;
 
         private void Awake()
         {
@@ -81,6 +82,11 @@ namespace Sol.CharacterCustomization
             SetStatus("Character randomized.", false);
         }
 
+        public void SetPlayerSaveRepository(ICharacterPlayerSaveRepository saveRepository)
+        {
+            repository = saveRepository ?? new CharacterPlayerSaveRepository(savePathOverride);
+        }
+
         public void FinalizeCharacter()
         {
             if (profile == null || characterNameInput == null)
@@ -120,26 +126,31 @@ namespace Sol.CharacterCustomization
             }
 
             ClearOverwriteConfirmation();
-            SetStatus($"Saved {record.PlayerName}.", false);
             Finalized?.Invoke(record);
 
-            if (gameplayCamera == null || previewControls == null)
+            if (!HasCompleteHandoff(out string handoffError))
             {
+                SetStatus(string.IsNullOrEmpty(handoffError)
+                    ? $"Saved {record.PlayerName}."
+                    : $"Saved {record.PlayerName}. {handoffError}", !string.IsNullOrEmpty(handoffError));
                 return;
             }
 
-            randomizeButton.interactable = false;
-            finalizeButton.interactable = false;
-            characterNameInput.interactable = false;
+            if (!previewControls.BlendTo(gameplayCamera, transitionDuration, CompleteGameplayHandoff))
+            {
+                SetStatus(
+                    $"Saved {record.PlayerName}. The gameplay camera handoff could not start, so the customization UI stayed active.",
+                    true);
+                return;
+            }
+
+            SetCustomizationInteractable(false);
             if (customizationInterface != null)
             {
                 customizationInterface.SetActive(false);
             }
 
-            if (!previewControls.BlendTo(gameplayCamera, transitionDuration, CompleteGameplayHandoff))
-            {
-                CompleteGameplayHandoff();
-            }
+            SetStatus($"Saved {record.PlayerName}.", false);
         }
 
         private void CompleteGameplayHandoff()
@@ -150,6 +161,60 @@ namespace Sol.CharacterCustomization
             }
 
             previewControls.enabled = false;
+        }
+
+        private bool HasCompleteHandoff(out string error)
+        {
+            error = null;
+            bool hasAnyHandoff = gameplayCamera != null || gameplayController != null;
+            if (!hasAnyHandoff)
+            {
+                return false;
+            }
+
+            if (gameplayCamera == null)
+            {
+                error = "Assign a gameplay camera before enabling the finalization handoff.";
+                return false;
+            }
+
+            if (previewControls == null)
+            {
+                error = "Assign preview controls before enabling the finalization handoff.";
+                return false;
+            }
+
+            if (previewControls.PreviewCamera == null)
+            {
+                error = "The preview controls do not have a preview camera assigned.";
+                return false;
+            }
+
+            if (previewControls.PreviewCamera == gameplayCamera)
+            {
+                error = "The gameplay camera must be separate from the preview camera.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private void SetCustomizationInteractable(bool interactable)
+        {
+            if (randomizeButton != null)
+            {
+                randomizeButton.interactable = interactable;
+            }
+
+            if (finalizeButton != null)
+            {
+                finalizeButton.interactable = interactable;
+            }
+
+            if (characterNameInput != null)
+            {
+                characterNameInput.interactable = interactable;
+            }
         }
 
         private void RegisterListeners()
