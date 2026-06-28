@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace Sol.CharacterCustomization.Editor.Tests
@@ -140,6 +141,46 @@ namespace Sol.CharacterCustomization.Editor.Tests
             }
         }
 
+        [Test]
+        public void FemaleMorphSliderDrivesEveryRendererWithMatchingBlendShapes()
+        {
+            var controllerRoot = new GameObject("Morph Controller Test");
+            var femaleRoot = new GameObject("Female");
+            var maleRoot = new GameObject("Male");
+            var body = CreateRendererWithMorphs(femaleRoot.transform, "Female Body", "Head_Eyes_Size");
+            var feature = CreateRendererWithMorphs(femaleRoot.transform, "Female Eyes", "Head_Eyes_Size");
+            controllerRoot.SetActive(false);
+
+            try
+            {
+                CharacterMorphController controller = controllerRoot.AddComponent<CharacterMorphController>();
+                var serializedController = new SerializedObject(controller);
+                serializedController.FindProperty("femaleRoot").objectReferenceValue = femaleRoot;
+                serializedController.FindProperty("maleRoot").objectReferenceValue = maleRoot;
+                serializedController.ApplyModifiedPropertiesWithoutUndo();
+
+                controllerRoot.SetActive(true);
+                controller.SetSex(CharacterSex.Female);
+                controller.SetMorph("head.eyes.size", 0.4f);
+
+                Assert.That(body.GetBlendShapeWeight(0), Is.EqualTo(40f).Within(0.001f));
+                Assert.That(feature.GetBlendShapeWeight(0), Is.EqualTo(40f).Within(0.001f));
+
+                controller.SetMorph("head.eyes.size", -0.25f);
+
+                Assert.That(body.GetBlendShapeWeight(0), Is.Zero.Within(0.001f));
+                Assert.That(body.GetBlendShapeWeight(1), Is.EqualTo(25f).Within(0.001f));
+                Assert.That(feature.GetBlendShapeWeight(0), Is.Zero.Within(0.001f));
+                Assert.That(feature.GetBlendShapeWeight(1), Is.EqualTo(25f).Within(0.001f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(controllerRoot);
+                UnityEngine.Object.DestroyImmediate(femaleRoot);
+                UnityEngine.Object.DestroyImmediate(maleRoot);
+            }
+        }
+
         private static CharacterRecipe CreateRecipe(float weight)
         {
             return new CharacterRecipe(
@@ -148,6 +189,40 @@ namespace Sol.CharacterCustomization.Editor.Tests
                 false,
                 Color.white,
                 new[] { new CharacterMorphValue("body.weight", weight) });
+        }
+
+        private static SkinnedMeshRenderer CreateRendererWithMorphs(Transform parent, string name, string baseShapeName)
+        {
+            var gameObject = new GameObject(name);
+            gameObject.transform.SetParent(parent, false);
+            SkinnedMeshRenderer renderer = gameObject.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = CreateMorphMesh(baseShapeName);
+            return renderer;
+        }
+
+        private static Mesh CreateMorphMesh(string baseShapeName)
+        {
+            var mesh = new Mesh
+            {
+                vertices = new[]
+                {
+                    new Vector3(0f, 0f, 0f),
+                    new Vector3(1f, 0f, 0f),
+                    new Vector3(0f, 1f, 0f)
+                },
+                triangles = new[] { 0, 1, 2 }
+            };
+
+            Vector3[] deltas =
+            {
+                Vector3.up,
+                Vector3.up,
+                Vector3.up
+            };
+
+            mesh.AddBlendShapeFrame(baseShapeName + "+", 100f, deltas, null, null);
+            mesh.AddBlendShapeFrame(baseShapeName + "-", 100f, deltas, null, null);
+            return mesh;
         }
     }
 }
