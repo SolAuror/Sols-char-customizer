@@ -18,6 +18,7 @@ namespace Sol.CharacterCustomization
         public Transform ActiveCharacterRoot => activeSex == CharacterSex.Female
             ? femaleRoot != null ? femaleRoot.transform : null
             : maleRoot != null ? maleRoot.transform : null;
+        public Animator ActiveAnimator => TryGetActiveAnimator(out Animator animator) ? animator : null;
         public IReadOnlyList<CharacterMorphDefinition> Definitions => CharacterMorphCatalog.Definitions;
         public IReadOnlyList<StatGrowthDefinition> StatGrowthDefinitions => CharacterStatGrowthCatalog.Definitions;
 
@@ -186,6 +187,19 @@ namespace Sol.CharacterCustomization
         {
             Initialize();
             return bindings[activeSex].TryGetValue(morphId, out MorphBinding binding) && binding.IsComplete;
+        }
+
+        public bool TryGetActiveAnimator(out Animator animator)
+        {
+            animator = null;
+            Transform activeRoot = ActiveCharacterRoot;
+            if (activeRoot == null)
+            {
+                return false;
+            }
+
+            animator = activeRoot.GetComponentInChildren<Animator>(true);
+            return animator != null;
         }
 
         private void Initialize()

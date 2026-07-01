@@ -72,6 +72,7 @@ namespace Sol.CharacterCustomization
                 ? focusToCamera.normalized
                 : -previewCamera.transform.forward;
             initialized = true;
+            SetAudioListenerEnabled(previewCamera, previewCamera.enabled);
             SnapToFocus();
         }
 
@@ -186,6 +187,8 @@ namespace Sol.CharacterCustomization
         {
             isBlending = true;
             gameplayCamera.enabled = false;
+            SetAudioListenerEnabled(gameplayCamera, false);
+            SetAudioListenerEnabled(previewCamera, true);
 
             Transform sourceTransform = previewCamera.transform;
             Transform targetTransform = gameplayCamera.transform;
@@ -207,10 +210,20 @@ namespace Sol.CharacterCustomization
 
             sourceTransform.SetPositionAndRotation(targetTransform.position, targetTransform.rotation);
             previewCamera.fieldOfView = gameplayCamera.fieldOfView;
+            SetAudioListenerEnabled(previewCamera, false);
             gameplayCamera.enabled = true;
+            SetAudioListenerEnabled(gameplayCamera, true);
             previewCamera.enabled = false;
             isBlending = false;
             onComplete?.Invoke();
+        }
+
+        private static void SetAudioListenerEnabled(Camera targetCamera, bool enabled)
+        {
+            if (targetCamera != null && targetCamera.TryGetComponent(out AudioListener listener))
+            {
+                listener.enabled = enabled;
+            }
         }
 
         private Vector3 CalculateFocusPoint()

@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Sols-Char-Edit.slnx"
+    "dotnet.defaultSolution": "Sols-Char-Edit-Repo.slnx"
 }

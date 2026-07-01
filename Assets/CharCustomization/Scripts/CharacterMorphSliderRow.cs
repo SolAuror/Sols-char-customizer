@@ -56,7 +56,7 @@ namespace Sol.CharacterCustomization
             float value = controller.GetMorph(morphId);
             slider.SetValueWithoutNotify(value);
             valueText.text = value.ToString("0.00");
-            slider.interactable = controller.IsMorphAvailable(morphId);
+            slider.interactable = true;
         }
 
         public void Unbind()

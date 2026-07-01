@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d90986ba435a7d040acd33907bd75677, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterMorphController
   femaleRoot: {fileID: 0}
   maleRoot: {fileID: 0}
@@ -59,20 +59,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 104b54c3ce184943a6f6c59626703da1, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterPreviewControls
   controller: {fileID: 5533027457802694159}
   previewCamera: {fileID: 0}
   focusOffset: {x: 0, y: 0, z: 0}
   viewportFocus: {x: 0.66, y: 0.5}
   positionSmoothTime: 0.12
-  rotationSharpness: 14
-  rotationSensitivity: 0.25
-  zoomSensitivity: 0.003
-  minimumZoomOffset: -1.25
-  maximumZoomOffset: 1.1
-  panSensitivity: 0.003
-  maximumPanOffset: 0.9
+  rotationSharpness: 10
+  rotationSensitivity: 0.2
+  zoomSensitivity: 0.2
+  minimumZoomOffset: -1.2
+  maximumZoomOffset: 1.8
+  panSensitivity: 0.0015
+  maximumPanOffset: 0.75
 --- !u!114 &7763284161080261142
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -83,11 +83,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbcae43c37f3b7c49acd2df8102cd8c0, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterProfile
   controller: {fileID: 5533027457802694159}
   authoredPreset: {fileID: 0}
   applyOnAwake: 0
   skinPalette: {fileID: 11400000, guid: 5d0582a508e31904eb23828d9d3da4cb, type: 2}
-  femaleSkinRenderers: []
-  maleSkinRenderers: []
+  skinColorPropertyNames:
+  - _BaseColor
+  - _Color
+  femaleSkinRenderers:
+  - {fileID: 0}
+  maleSkinRenderers:
+  - {fileID: 0}

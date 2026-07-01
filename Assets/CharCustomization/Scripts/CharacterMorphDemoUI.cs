@@ -27,11 +27,17 @@ namespace Sol.CharacterCustomization
         [SerializeField] private TMP_Dropdown presetDropdown;
         [SerializeField] private Button savePresetButton;
         [SerializeField] private Button loadPresetButton;
+        [SerializeField] private Button deletePresetButton;
         [SerializeField] private Button resetAllButton;
         [SerializeField] private Button resetGroupButton;
         [SerializeField] private TMP_Text resetGroupButtonLabel;
         [SerializeField] private GameObject skinPanel;
+        [SerializeField] private string customSkinSavePathOverride;
+        [SerializeField] private ScrollRect skinSwatchScrollRect;
+        [SerializeField] private RectTransform skinSwatchContent;
         [SerializeField] private CharacterSkinSwatchButton[] skinSwatches = Array.Empty<CharacterSkinSwatchButton>();
+        [SerializeField] private CharacterSkinSwatchButton savedSkinSwatchTemplate;
+        [SerializeField] private Button addSkinButton;
         [SerializeField] private Button customColorToggleButton;
         [SerializeField] private GameObject customColorPanel;
         [SerializeField] private Slider hueSlider;
@@ -45,8 +51,12 @@ namespace Sol.CharacterCustomization
         private readonly Dictionary<string, CharacterMorphSliderRow> rows = new(StringComparer.Ordinal);
         private readonly Dictionary<CharacterMorphTabButton, UnityAction> tabListeners = new();
         private readonly Dictionary<CharacterSkinSwatchButton, UnityAction> skinListeners = new();
+        private readonly Dictionary<CharacterSkinSwatchButton, UnityAction> skinDeleteListeners = new();
+        private readonly Dictionary<CharacterSkinSwatchButton, RuntimeSkinColorRecord> savedSkinSwatches = new();
+        private readonly List<CharacterSkinSwatchButton> runtimeSkinSwatches = new();
         private readonly List<PresetOption> availablePresets = new();
         private ICharacterPresetSaveRepository presetRepository;
+        private ICharacterSkinColorSaveRepository customSkinRepository;
         private string pendingPresetOverwriteName;
         private bool initialized;
         private bool listenersRegistered;
@@ -60,6 +70,7 @@ namespace Sol.CharacterCustomization
         public event Action<string, CharacterRecipe> PresetLoaded;
 
         public ICharacterPresetSaveRepository PresetRepository => presetRepository;
+        public ICharacterSkinColorSaveRepository CustomSkinRepository => customSkinRepository;
 
         private void Start()
         {
@@ -135,6 +146,16 @@ namespace Sol.CharacterCustomization
             }
         }
 
+        public void SetCustomSkinRepository(ICharacterSkinColorSaveRepository repository)
+        {
+            customSkinRepository = repository;
+            if (initialized)
+            {
+                ReloadSavedSkinSwatches();
+                RefreshSkinPanel();
+            }
+        }
+
         public bool TrySaveCurrentPreset(
             string presetName,
             bool overwriteExisting,
@@ -182,7 +203,11 @@ namespace Sol.CharacterCustomization
                 return false;
             }
 
-            presetNameInput?.SetTextWithoutNotify(presetName);
+            if (presetNameInput != null)
+            {
+                presetNameInput.SetTextWithoutNotify(presetName);
+            }
+
             RefreshPanel();
             PresetLoaded?.Invoke(presetName, recipe);
             error = null;
@@ -220,13 +245,10 @@ namespace Sol.CharacterCustomization
             }
 
             refreshingSkin = true;
-            foreach (CharacterSkinSwatchButton swatch in skinSwatches)
+            foreach (CharacterSkinSwatchButton swatch in EnumerateSkinSwatches())
             {
-                if (swatch != null)
-                {
-                    bool selected = !profile.UsesCustomSkinColor && swatch.SkinToneId == profile.SkinToneId;
-                    swatch.transform.localScale = selected ? Vector3.one * 1.08f : Vector3.one;
-                }
+                bool selected = IsSkinSwatchSelected(swatch);
+                swatch.transform.localScale = selected ? Vector3.one * 1.08f : Vector3.one;
             }
 
             Color color = profile.CurrentSkinColor;
@@ -245,15 +267,18 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
+            TryRepairReferences();
+
             if (!HasRequiredReferences())
             {
                 Debug.LogError("The prefab-first character morph UI has incomplete references.", this);
-                enabled = false;
                 return;
             }
 
             selectedGroup = CharacterCustomizationUiConfig.DefaultMorphGroupId;
             EnsurePresetRepository();
+            EnsureCustomSkinRepository();
+            skinSwatches = GetConfiguredAuthoredSkinSwatches();
             CacheAuthoredRows();
 
             foreach (CharacterMorphDefinition definition in controller.Definitions)
@@ -266,6 +291,7 @@ namespace Sol.CharacterCustomization
 
             initialized = true;
             RefreshPresetOptions();
+            LoadSavedSkinSwatches();
             customColorPanel.SetActive(false);
             RegisterListeners();
             controller.SetSex(controller.ActiveSex);
@@ -276,6 +302,7 @@ namespace Sol.CharacterCustomization
         private bool HasRequiredReferences()
         {
             var errors = new List<string>();
+            var warnings = new List<string>();
             AddMissing(errors, controller == null, "controller");
             AddMissing(errors, profile == null, "profile");
             AddMissing(errors, content == null, "content");
@@ -289,14 +316,17 @@ namespace Sol.CharacterCustomization
             AddMissing(errors, mainSliderScrollRect == null, "mainSliderScrollRect");
             AddMissing(errors, presetLibrary == null, "presetLibrary");
             AddMissing(errors, presetPanel == null, "presetPanel");
-            AddMissing(errors, presetNameInput == null, "presetNameInput");
             AddMissing(errors, presetDropdown == null, "presetDropdown");
             AddMissing(errors, savePresetButton == null, "savePresetButton");
             AddMissing(errors, loadPresetButton == null, "loadPresetButton");
-            AddMissing(errors, resetAllButton == null, "resetAllButton");
+            AddMissing(warnings, deletePresetButton == null, "deletePresetButton");
+            AddMissing(warnings, resetAllButton == null, "resetAllButton");
             AddMissing(errors, resetGroupButton == null, "resetGroupButton");
             AddMissing(errors, resetGroupButtonLabel == null, "resetGroupButtonLabel");
             AddMissing(errors, skinPanel == null, "skinPanel");
+            AddMissing(errors, skinSwatchScrollRect == null, "skinSwatchScrollRect");
+            AddMissing(errors, skinSwatchContent == null, "skinSwatchContent");
+            AddMissing(errors, addSkinButton == null, "addSkinButton");
             AddMissing(errors, customColorToggleButton == null, "customColorToggleButton");
             AddMissing(errors, customColorPanel == null, "customColorPanel");
             AddMissing(errors, hueSlider == null, "hueSlider");
@@ -305,6 +335,11 @@ namespace Sol.CharacterCustomization
             AddMissing(errors, customColorPreview == null, "customColorPreview");
             ValidateSkinSwatches(errors);
             ValidateTabs(errors);
+
+            if (warnings.Count > 0)
+            {
+                Debug.LogWarning($"The character morph UI is missing optional references: {string.Join("; ", warnings)}", this);
+            }
 
             if (errors.Count > 0)
             {
@@ -315,9 +350,133 @@ namespace Sol.CharacterCustomization
             return true;
         }
 
+        private void TryRepairReferences()
+        {
+            RepairNamedComponent(ref femaleButton, "femaleButton", "Female Button");
+            RepairNamedComponent(ref maleButton, "maleButton", "Male Button");
+            RepairNamedComponent(ref femaleButtonImage, "femaleButtonImage", "Female Button");
+            RepairNamedComponent(ref maleButtonImage, "maleButtonImage", "Male Button");
+            RepairNamedComponent(ref sliderRowTemplate, "sliderRowTemplate", "Slider Row Template");
+            RepairNamedComponent(ref tabRailScrollRect, "tabRailScrollRect", "Tab Rail");
+            RepairNamedComponent(ref mainSliderScrollRect, "mainSliderScrollRect", "ScrollPanel");
+            RepairNamedComponent(ref presetDropdown, "presetDropdown", "Preset Dropdown");
+            RepairNamedComponent(ref savePresetButton, "savePresetButton", "Save Preset Button");
+            RepairNamedComponent(ref loadPresetButton, "loadPresetButton", "Load Preset Button");
+            RepairNamedComponent(ref deletePresetButton, "deletePresetButton", "Delete Preset Button", "Delete Current", "Delete Current Button");
+            RepairNamedComponent(ref resetAllButton, "resetAllButton", "Reset All Button");
+            RepairNamedComponent(ref resetGroupButton, "resetGroupButton", "Reset Tab Button", "Reset Group Button");
+            RepairNamedComponent(ref skinSwatchScrollRect, "skinSwatchScrollRect", "Skin Scroll View");
+            RepairNamedComponent(ref addSkinButton, "addSkinButton", "Add Skin");
+            RepairNamedComponent(ref customColorToggleButton, "customColorToggleButton", "Custom Colour Button", "Custom Color Button");
+            RepairNamedComponent(ref hueSlider, "hueSlider", "Hue Slider");
+            RepairNamedComponent(ref saturationSlider, "saturationSlider", "Saturation Slider");
+            RepairNamedComponent(ref valueSlider, "valueSlider", "Value Slider");
+            RepairNamedComponent(ref customColorPreview, "customColorPreview", "Custom Colour Preview", "Custom Color Preview");
+            RepairNamedGameObject(ref presetPanel, "presetPanel", "Preset Panel");
+            RepairNamedGameObject(ref skinPanel, "skinPanel", "Skin Panel");
+            RepairNamedGameObject(ref customColorPanel, "customColorPanel", "Advanced Custom Colour Panel", "Advanced Custom Color Panel");
+
+            if (content == null && mainSliderScrollRect != null && mainSliderScrollRect.content != null)
+            {
+                content = mainSliderScrollRect.content;
+                Debug.LogWarning($"Repaired missing content reference from authored ScrollRect '{mainSliderScrollRect.name}'.", this);
+            }
+
+            if (tabRailContent == null && tabRailScrollRect != null && tabRailScrollRect.content != null)
+            {
+                tabRailContent = tabRailScrollRect.content;
+                Debug.LogWarning($"Repaired missing tabRailContent reference from authored ScrollRect '{tabRailScrollRect.name}'.", this);
+            }
+
+            if (skinSwatchContent == null && skinSwatchScrollRect != null && skinSwatchScrollRect.content != null)
+            {
+                skinSwatchContent = skinSwatchScrollRect.content;
+                Debug.LogWarning($"Repaired missing skinSwatchContent reference from authored ScrollRect '{skinSwatchScrollRect.name}'.", this);
+            }
+
+            if (resetGroupButtonLabel == null && resetGroupButton != null)
+            {
+                resetGroupButtonLabel = resetGroupButton.GetComponentInChildren<TMP_Text>(true);
+                if (resetGroupButtonLabel != null)
+                {
+                    Debug.LogWarning($"Repaired missing resetGroupButtonLabel reference from authored Button '{resetGroupButton.name}'.", this);
+                }
+            }
+        }
+
+        private void RepairNamedComponent<T>(ref T reference, string label, params string[] objectNames)
+            where T : Component
+        {
+            if (reference != null)
+            {
+                return;
+            }
+
+            if (TryFindUniqueNamedComponent(objectNames, out T found))
+            {
+                reference = found;
+                Debug.LogWarning($"Repaired missing {label} reference from authored object '{found.gameObject.name}'.", this);
+            }
+        }
+
+        private void RepairNamedGameObject(ref GameObject reference, string label, params string[] objectNames)
+        {
+            if (reference != null)
+            {
+                return;
+            }
+
+            if (TryFindUniqueNamedComponent(objectNames, out RectTransform found))
+            {
+                reference = found.gameObject;
+                Debug.LogWarning($"Repaired missing {label} reference from authored object '{found.gameObject.name}'.", this);
+            }
+        }
+
+        private bool TryFindUniqueNamedComponent<T>(IReadOnlyList<string> objectNames, out T match)
+            where T : Component
+        {
+            match = null;
+            T[] candidates = GetComponentsInChildren<T>(true);
+            foreach (T candidate in candidates)
+            {
+                if (candidate == null || !MatchesAnyName(candidate.gameObject.name, objectNames))
+                {
+                    continue;
+                }
+
+                if (match != null)
+                {
+                    return false;
+                }
+
+                match = candidate;
+            }
+
+            return match != null;
+        }
+
+        private static bool MatchesAnyName(string candidateName, IReadOnlyList<string> objectNames)
+        {
+            for (int index = 0; index < objectNames.Count; index++)
+            {
+                if (string.Equals(candidateName, objectNames[index], StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void EnsurePresetRepository()
         {
             presetRepository ??= new CharacterPresetSaveRepository(presetSavePathOverride);
+        }
+
+        private void EnsureCustomSkinRepository()
+        {
+            customSkinRepository ??= new CharacterSkinColorSaveRepository(customSkinSavePathOverride);
         }
 
         private static void AddMissing(List<string> errors, bool missing, string label)
@@ -337,12 +496,18 @@ namespace Sol.CharacterCustomization
             }
 
             var ids = new HashSet<string>(StringComparer.Ordinal);
+            int configuredCount = 0;
+            CharacterSkinPalette palette = profile != null ? profile.SkinPalette : null;
             for (int index = 0; index < skinSwatches.Length; index++)
             {
                 CharacterSkinSwatchButton swatch = skinSwatches[index];
                 if (swatch == null)
                 {
-                    errors.Add($"skinSwatches[{index}] is unassigned");
+                    continue;
+                }
+
+                if (IsAddSkinSwatch(swatch))
+                {
                     continue;
                 }
 
@@ -352,24 +517,21 @@ namespace Sol.CharacterCustomization
                     continue;
                 }
 
+                configuredCount++;
                 if (!ids.Add(swatch.SkinToneId))
                 {
                     errors.Add($"skinSwatches contains duplicate tone '{swatch.SkinToneId}'");
                 }
-            }
 
-            CharacterSkinPalette palette = profile != null ? profile.SkinPalette : null;
-            if (palette == null)
-            {
-                return;
-            }
-
-            foreach (CharacterSkinTone tone in palette.Tones)
-            {
-                if (tone != null && !ids.Contains(tone.Id))
+                if (palette != null && !palette.TryGet(swatch.SkinToneId, out _))
                 {
-                    errors.Add($"skinSwatches is missing palette tone '{tone.Id}'");
+                    errors.Add($"skinSwatches[{index}] '{swatch.name}' references unknown tone '{swatch.SkinToneId}'");
                 }
+            }
+
+            if (configuredCount == 0)
+            {
+                errors.Add("skinSwatches has no configured entries");
             }
         }
 
@@ -419,6 +581,240 @@ namespace Sol.CharacterCustomization
                     errors.Add($"tabButtons[{index}] should be '{expectedTabs[index]}' but is '{tab.GroupId}'");
                 }
             }
+        }
+
+        private CharacterSkinSwatchButton[] GetConfiguredAuthoredSkinSwatches()
+        {
+            if (skinSwatches == null)
+            {
+                return Array.Empty<CharacterSkinSwatchButton>();
+            }
+
+            var swatches = new List<CharacterSkinSwatchButton>(skinSwatches.Length);
+            foreach (CharacterSkinSwatchButton swatch in skinSwatches)
+            {
+                if (swatch != null && swatch.IsConfigured && !IsAddSkinSwatch(swatch))
+                {
+                    swatches.Add(swatch);
+                }
+            }
+
+            return swatches.ToArray();
+        }
+
+        private void LoadSavedSkinSwatches(bool registerListenersForNewSwatches = false)
+        {
+            EnsureCustomSkinRepository();
+            if (!customSkinRepository.TryLoad(out CharacterSkinColorSaveData data, out string error))
+            {
+                Debug.LogWarning(error, this);
+                return;
+            }
+
+            foreach (RuntimeSkinColorRecord record in data.Colors)
+            {
+                if (record != null && FindSavedSkinSwatch(record.Id) == null)
+                {
+                    AddSavedSkinSwatch(record, registerListenersForNewSwatches, false);
+                }
+            }
+        }
+
+        private void ReloadSavedSkinSwatches()
+        {
+            foreach (CharacterSkinSwatchButton swatch in runtimeSkinSwatches)
+            {
+                if (swatch != null)
+                {
+                    if (skinListeners.TryGetValue(swatch, out UnityAction listener) && swatch.Button != null)
+                    {
+                        swatch.Button.onClick.RemoveListener(listener);
+                        skinListeners.Remove(swatch);
+                    }
+
+                    if (skinDeleteListeners.TryGetValue(swatch, out UnityAction deleteListener) &&
+                        swatch.DeleteButton != null)
+                    {
+                        swatch.DeleteButton.onClick.RemoveListener(deleteListener);
+                        skinDeleteListeners.Remove(swatch);
+                    }
+
+                    Destroy(swatch.gameObject);
+                }
+            }
+
+            runtimeSkinSwatches.Clear();
+            savedSkinSwatches.Clear();
+            LoadSavedSkinSwatches(listenersRegistered);
+        }
+
+        private CharacterSkinSwatchButton AddSavedSkinSwatch(
+            RuntimeSkinColorRecord record,
+            bool registerListener,
+            bool refreshLayout)
+        {
+            CharacterSkinSwatchButton template = GetSavedSkinSwatchTemplate();
+            if (template == null || record == null)
+            {
+                return null;
+            }
+
+            Transform parent = skinSwatchContent != null ? skinSwatchContent : template.transform.parent;
+            CharacterSkinSwatchButton swatch = Instantiate(template, parent);
+            swatch.name = $"Saved Skin {runtimeSkinSwatches.Count + 1}";
+            swatch.gameObject.SetActive(true);
+            swatch.transform.localScale = Vector3.one;
+            swatch.ConfigureRuntime(GetSavedSkinToneId(record.Id), record.Label, record.Color);
+            swatch.SetDeleteVisible(true);
+            InsertBeforeAddSkin(swatch.transform);
+
+            runtimeSkinSwatches.Add(swatch);
+            savedSkinSwatches[swatch] = record;
+            if (registerListener)
+            {
+                RegisterSkinSwatchListener(swatch);
+            }
+
+            if (refreshLayout)
+            {
+                RefreshSkinSwatchContentHeight();
+            }
+
+            return swatch;
+        }
+
+        private CharacterSkinSwatchButton GetSavedSkinSwatchTemplate()
+        {
+            if (savedSkinSwatchTemplate != null && savedSkinSwatchTemplate.IsConfigured)
+            {
+                return savedSkinSwatchTemplate;
+            }
+
+            if (skinSwatches != null)
+            {
+                for (int index = skinSwatches.Length - 1; index >= 0; index--)
+                {
+                    CharacterSkinSwatchButton swatch = skinSwatches[index];
+                    if (swatch != null && swatch.IsConfigured && !IsAddSkinSwatch(swatch))
+                    {
+                        return swatch;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private CharacterSkinSwatchButton FindSavedSkinSwatch(string recordId)
+        {
+            foreach (KeyValuePair<CharacterSkinSwatchButton, RuntimeSkinColorRecord> pair in savedSkinSwatches)
+            {
+                if (pair.Value != null && string.Equals(pair.Value.Id, recordId, StringComparison.Ordinal))
+                {
+                    return pair.Key;
+                }
+            }
+
+            return null;
+        }
+
+        private void InsertBeforeAddSkin(Transform swatchTransform)
+        {
+            if (swatchTransform == null || addSkinButton == null)
+            {
+                return;
+            }
+
+            int addSkinIndex = addSkinButton.transform.GetSiblingIndex();
+            if (swatchTransform.GetSiblingIndex() != addSkinIndex)
+            {
+                swatchTransform.SetSiblingIndex(addSkinIndex);
+            }
+        }
+
+        private void RefreshSkinSwatchContentHeight()
+        {
+            if (skinSwatchContent == null)
+            {
+                return;
+            }
+
+            float requiredHeight = 0f;
+            if (skinSwatchContent.TryGetComponent(out GridLayoutGroup grid))
+            {
+                int activeChildren = 0;
+                for (int index = 0; index < skinSwatchContent.childCount; index++)
+                {
+                    if (skinSwatchContent.GetChild(index).gameObject.activeSelf)
+                    {
+                        activeChildren++;
+                    }
+                }
+
+                int columns = grid.constraint == GridLayoutGroup.Constraint.FixedColumnCount
+                    ? Mathf.Max(1, grid.constraintCount)
+                    : Mathf.Max(1, activeChildren);
+                int rows = activeChildren == 0 ? 0 : Mathf.CeilToInt(activeChildren / (float)columns);
+                requiredHeight = grid.padding.top + grid.padding.bottom +
+                                 rows * grid.cellSize.y +
+                                 Mathf.Max(0, rows - 1) * grid.spacing.y;
+            }
+
+            float viewportHeight = skinSwatchScrollRect != null && skinSwatchScrollRect.viewport != null
+                ? skinSwatchScrollRect.viewport.rect.height
+                : 0f;
+            float height = Mathf.Max(viewportHeight, requiredHeight);
+            skinSwatchContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(skinSwatchContent);
+        }
+
+        private IEnumerable<CharacterSkinSwatchButton> EnumerateSkinSwatches()
+        {
+            if (skinSwatches != null)
+            {
+                foreach (CharacterSkinSwatchButton swatch in skinSwatches)
+                {
+                    if (swatch != null && swatch.IsConfigured && !IsAddSkinSwatch(swatch))
+                    {
+                        yield return swatch;
+                    }
+                }
+            }
+
+            foreach (CharacterSkinSwatchButton swatch in runtimeSkinSwatches)
+            {
+                if (swatch != null && swatch.IsConfigured)
+                {
+                    yield return swatch;
+                }
+            }
+        }
+
+        private bool IsSkinSwatchSelected(CharacterSkinSwatchButton swatch)
+        {
+            if (swatch == null)
+            {
+                return false;
+            }
+
+            if (savedSkinSwatches.TryGetValue(swatch, out RuntimeSkinColorRecord savedRecord))
+            {
+                return profile.UsesCustomSkinColor &&
+                       CharacterSkinColorSaveRepository.ColorsMatch(savedRecord.Color, profile.CurrentSkinColor);
+            }
+
+            return !profile.UsesCustomSkinColor &&
+                   string.Equals(swatch.SkinToneId, profile.SkinToneId, StringComparison.Ordinal);
+        }
+
+        private bool IsAddSkinSwatch(CharacterSkinSwatchButton swatch)
+        {
+            return swatch != null && addSkinButton != null && swatch.Button == addSkinButton;
+        }
+
+        private static string GetSavedSkinToneId(string recordId)
+        {
+            return $"saved_skin_{recordId}";
         }
 
         private void CacheAuthoredRows()
@@ -497,7 +893,8 @@ namespace Sol.CharacterCustomization
 
         private void SavePreset()
         {
-            string presetName = presetNameInput.text.Trim();
+            TMP_InputField nameInput = GetPresetNameSource();
+            string presetName = nameInput != null ? nameInput.text.Trim() : string.Empty;
             bool confirmOverwrite = string.Equals(
                 pendingPresetOverwriteName,
                 presetName,
@@ -528,29 +925,59 @@ namespace Sol.CharacterCustomization
             }
 
             ClearPresetOverwriteConfirmation();
-            presetNameInput.SetTextWithoutNotify(savedPreset.PresetName);
+            if (presetNameInput != null)
+            {
+                presetNameInput.SetTextWithoutNotify(savedPreset.PresetName);
+            }
+
             RefreshPresetOptions(savedPreset.Id);
         }
 
         private void LoadPreset()
         {
-            int selectedIndex = presetDropdown.value;
-            if (selectedIndex < 0 || selectedIndex >= availablePresets.Count)
+            if (!TryGetSelectedPreset(out PresetOption preset) || preset.IsNone)
             {
                 Debug.LogWarning("Select a character morph preset before loading.", this);
                 return;
             }
 
-            PresetOption preset = availablePresets[selectedIndex];
             if (!TryApplyPresetRecipe(preset.PresetName, preset.Recipe, out string error))
             {
                 Debug.LogWarning(error, this);
             }
         }
 
+        private void DeleteSelectedPreset()
+        {
+            if (!TryGetSelectedPreset(out PresetOption preset) || !preset.IsRuntime)
+            {
+                Debug.LogWarning("Select a saved preset before deleting.", this);
+                RefreshPresetControls();
+                return;
+            }
+
+            EnsurePresetRepository();
+            if (!presetRepository.TryDeletePreset(preset.RuntimeId, out string deletedPresetName, out string error))
+            {
+                Debug.LogWarning(error, this);
+                RefreshPresetControls();
+                return;
+            }
+
+            if (presetNameInput != null &&
+                string.Equals(presetNameInput.text, deletedPresetName, StringComparison.OrdinalIgnoreCase))
+            {
+                presetNameInput.SetTextWithoutNotify(string.Empty);
+            }
+
+            ClearPresetOverwriteConfirmation();
+            RefreshPresetOptions();
+        }
+
         private void RefreshPresetOptions(string selectedRuntimePresetId = null)
         {
             availablePresets.Clear();
+            availablePresets.Add(PresetOption.None);
             foreach (CharacterPreset preset in presetLibrary.Presets)
             {
                 if (preset != null)
@@ -576,13 +1003,6 @@ namespace Sol.CharacterCustomization
             }
 
             presetDropdown.ClearOptions();
-            if (availablePresets.Count == 0)
-            {
-                presetDropdown.AddOptions(new List<string> { "No presets" });
-                presetDropdown.interactable = false;
-                loadPresetButton.interactable = false;
-                return;
-            }
 
             var options = new List<string>(availablePresets.Count);
             int selectedIndex = 0;
@@ -600,8 +1020,7 @@ namespace Sol.CharacterCustomization
             presetDropdown.AddOptions(options);
             presetDropdown.SetValueWithoutNotify(selectedIndex);
             presetDropdown.RefreshShownValue();
-            presetDropdown.interactable = true;
-            loadPresetButton.interactable = true;
+            RefreshPresetControls();
         }
 
         private void SelectTab(string groupId)
@@ -690,29 +1109,24 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            femaleButton.onClick.AddListener(SelectFemale);
-            maleButton.onClick.AddListener(SelectMale);
-            savePresetButton.onClick.AddListener(SavePreset);
-            loadPresetButton.onClick.AddListener(LoadPreset);
-            resetAllButton.onClick.AddListener(ResetAll);
-            resetGroupButton.onClick.AddListener(ResetSelectedGroup);
-            presetNameInput.onValueChanged.AddListener(OnPresetNameChanged);
-            customColorToggleButton.onClick.AddListener(ToggleCustomColorPanel);
-            hueSlider.onValueChanged.AddListener(OnCustomColorChanged);
-            saturationSlider.onValueChanged.AddListener(OnCustomColorChanged);
-            valueSlider.onValueChanged.AddListener(OnCustomColorChanged);
+            femaleButton?.onClick.AddListener(SelectFemale);
+            maleButton?.onClick.AddListener(SelectMale);
+            savePresetButton?.onClick.AddListener(SavePreset);
+            loadPresetButton?.onClick.AddListener(LoadPreset);
+            deletePresetButton?.onClick.AddListener(DeleteSelectedPreset);
+            presetDropdown?.onValueChanged.AddListener(OnPresetSelectionChanged);
+            resetAllButton?.onClick.AddListener(ResetAll);
+            resetGroupButton?.onClick.AddListener(ResetSelectedGroup);
+            GetPresetNameSource()?.onValueChanged.AddListener(OnPresetNameChanged);
+            addSkinButton?.onClick.AddListener(SaveCurrentSkinColor);
+            customColorToggleButton?.onClick.AddListener(ToggleCustomColorPanel);
+            hueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+            saturationSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+            valueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
 
-            foreach (CharacterSkinSwatchButton swatch in skinSwatches)
+            foreach (CharacterSkinSwatchButton swatch in EnumerateSkinSwatches())
             {
-                if (swatch == null || !swatch.IsConfigured || skinListeners.ContainsKey(swatch))
-                {
-                    continue;
-                }
-
-                CharacterSkinSwatchButton capturedSwatch = swatch;
-                UnityAction listener = () => SelectSkinTone(capturedSwatch.SkinToneId);
-                capturedSwatch.Button.onClick.AddListener(listener);
-                skinListeners.Add(capturedSwatch, listener);
+                RegisterSkinSwatchListener(swatch);
             }
 
             foreach (CharacterMorphTabButton tab in tabButtons)
@@ -731,6 +1145,28 @@ namespace Sol.CharacterCustomization
             listenersRegistered = true;
         }
 
+        private void RegisterSkinSwatchListener(CharacterSkinSwatchButton swatch)
+        {
+            if (swatch == null || !swatch.IsConfigured || swatch.Button == null || skinListeners.ContainsKey(swatch))
+            {
+                return;
+            }
+
+            CharacterSkinSwatchButton capturedSwatch = swatch;
+            UnityAction listener = () => SelectSkinSwatch(capturedSwatch);
+            capturedSwatch.Button.onClick.AddListener(listener);
+            skinListeners.Add(capturedSwatch, listener);
+
+            if (savedSkinSwatches.ContainsKey(swatch) &&
+                swatch.DeleteButton != null &&
+                !skinDeleteListeners.ContainsKey(swatch))
+            {
+                UnityAction deleteListener = () => DeleteSavedSkinSwatch(capturedSwatch);
+                capturedSwatch.DeleteButton.onClick.AddListener(deleteListener);
+                skinDeleteListeners.Add(capturedSwatch, deleteListener);
+            }
+        }
+
         private void UnregisterListeners()
         {
             if (!listenersRegistered)
@@ -738,17 +1174,20 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            femaleButton.onClick.RemoveListener(SelectFemale);
-            maleButton.onClick.RemoveListener(SelectMale);
-            savePresetButton.onClick.RemoveListener(SavePreset);
-            loadPresetButton.onClick.RemoveListener(LoadPreset);
-            resetAllButton.onClick.RemoveListener(ResetAll);
-            resetGroupButton.onClick.RemoveListener(ResetSelectedGroup);
-            presetNameInput.onValueChanged.RemoveListener(OnPresetNameChanged);
-            customColorToggleButton.onClick.RemoveListener(ToggleCustomColorPanel);
-            hueSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
-            saturationSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
-            valueSlider.onValueChanged.RemoveListener(OnCustomColorChanged);
+            femaleButton?.onClick.RemoveListener(SelectFemale);
+            maleButton?.onClick.RemoveListener(SelectMale);
+            savePresetButton?.onClick.RemoveListener(SavePreset);
+            loadPresetButton?.onClick.RemoveListener(LoadPreset);
+            deletePresetButton?.onClick.RemoveListener(DeleteSelectedPreset);
+            presetDropdown?.onValueChanged.RemoveListener(OnPresetSelectionChanged);
+            resetAllButton?.onClick.RemoveListener(ResetAll);
+            resetGroupButton?.onClick.RemoveListener(ResetSelectedGroup);
+            GetPresetNameSource()?.onValueChanged.RemoveListener(OnPresetNameChanged);
+            addSkinButton?.onClick.RemoveListener(SaveCurrentSkinColor);
+            customColorToggleButton?.onClick.RemoveListener(ToggleCustomColorPanel);
+            hueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+            saturationSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+            valueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
 
             foreach (KeyValuePair<CharacterSkinSwatchButton, UnityAction> pair in skinListeners)
             {
@@ -759,6 +1198,16 @@ namespace Sol.CharacterCustomization
             }
 
             skinListeners.Clear();
+
+            foreach (KeyValuePair<CharacterSkinSwatchButton, UnityAction> pair in skinDeleteListeners)
+            {
+                if (pair.Key != null && pair.Key.DeleteButton != null)
+                {
+                    pair.Key.DeleteButton.onClick.RemoveListener(pair.Value);
+                }
+            }
+
+            skinDeleteListeners.Clear();
 
             foreach (KeyValuePair<CharacterMorphTabButton, UnityAction> pair in tabListeners)
             {
@@ -782,6 +1231,44 @@ namespace Sol.CharacterCustomization
             ClearPresetOverwriteConfirmation();
         }
 
+        private void OnPresetSelectionChanged(int _)
+        {
+            ClearPresetOverwriteConfirmation();
+            RefreshPresetControls();
+        }
+
+        private bool TryGetSelectedPreset(out PresetOption preset)
+        {
+            int selectedIndex = presetDropdown != null ? presetDropdown.value : -1;
+            if (selectedIndex >= 0 && selectedIndex < availablePresets.Count)
+            {
+                preset = availablePresets[selectedIndex];
+                return true;
+            }
+
+            preset = null;
+            return false;
+        }
+
+        private void RefreshPresetControls()
+        {
+            bool hasPresetSelection = TryGetSelectedPreset(out PresetOption preset) && !preset.IsNone;
+            if (presetDropdown != null)
+            {
+                presetDropdown.interactable = availablePresets.Count > 1;
+            }
+
+            if (loadPresetButton != null)
+            {
+                loadPresetButton.interactable = hasPresetSelection;
+            }
+
+            if (deletePresetButton != null)
+            {
+                deletePresetButton.interactable = hasPresetSelection && preset.IsRuntime;
+            }
+        }
+
         private void ClearPresetOverwriteConfirmation()
         {
             pendingPresetOverwriteName = null;
@@ -797,6 +1284,95 @@ namespace Sol.CharacterCustomization
             {
                 buttonLabel.text = label;
             }
+        }
+
+        private TMP_InputField GetPresetNameSource()
+        {
+            if (presetNameInput != null)
+            {
+                return presetNameInput;
+            }
+
+            CharacterFinalizationFlow finalizationFlow = GetComponent<CharacterFinalizationFlow>();
+            return finalizationFlow != null ? finalizationFlow.CharacterNameInput : null;
+        }
+
+        private void SelectSkinSwatch(CharacterSkinSwatchButton swatch)
+        {
+            if (swatch == null)
+            {
+                return;
+            }
+
+            if (savedSkinSwatches.TryGetValue(swatch, out RuntimeSkinColorRecord savedRecord))
+            {
+                profile.SetCustomSkinColor(savedRecord.Color);
+                RefreshSkinPanel();
+                return;
+            }
+
+            SelectSkinTone(swatch.SkinToneId);
+        }
+
+        private void SaveCurrentSkinColor()
+        {
+            EnsureCustomSkinRepository();
+            if (!customSkinRepository.TrySaveColor(
+                    profile.CurrentSkinColor,
+                    out RuntimeSkinColorRecord savedRecord,
+                    out _,
+                    out string error))
+            {
+                Debug.LogWarning(error, this);
+                return;
+            }
+
+            CharacterSkinSwatchButton swatch = FindSavedSkinSwatch(savedRecord.Id) ??
+                                               AddSavedSkinSwatch(savedRecord, listenersRegistered, true);
+            if (swatch != null)
+            {
+                SelectSkinSwatch(swatch);
+                if (skinSwatchScrollRect != null)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    skinSwatchScrollRect.verticalNormalizedPosition = 0f;
+                }
+            }
+        }
+
+        private void DeleteSavedSkinSwatch(CharacterSkinSwatchButton swatch)
+        {
+            if (swatch == null || !savedSkinSwatches.TryGetValue(swatch, out RuntimeSkinColorRecord record))
+            {
+                Debug.LogWarning("Select a saved skin color before deleting.", this);
+                return;
+            }
+
+            EnsureCustomSkinRepository();
+            if (!customSkinRepository.TryDeleteColor(record.Id, out _, out string error))
+            {
+                Debug.LogWarning(error, this);
+                return;
+            }
+
+            if (skinListeners.TryGetValue(swatch, out UnityAction listener) && swatch.Button != null)
+            {
+                swatch.Button.onClick.RemoveListener(listener);
+                skinListeners.Remove(swatch);
+            }
+
+            if (skinDeleteListeners.TryGetValue(swatch, out UnityAction deleteListener) &&
+                swatch.DeleteButton != null)
+            {
+                swatch.DeleteButton.onClick.RemoveListener(deleteListener);
+                skinDeleteListeners.Remove(swatch);
+            }
+
+            runtimeSkinSwatches.Remove(swatch);
+            savedSkinSwatches.Remove(swatch);
+            Destroy(swatch.gameObject);
+            RefreshSkinPanel();
+            RefreshSkinSwatchContentHeight();
         }
 
         private void SelectSkinTone(string toneId)
@@ -845,18 +1421,27 @@ namespace Sol.CharacterCustomization
 
         private sealed class PresetOption
         {
+            public static readonly PresetOption None = new("",
+                "None Selected...",
+                null,
+                false,
+                null,
+                true);
+
             private PresetOption(
                 string presetName,
                 string optionLabel,
                 CharacterRecipe recipe,
                 bool isRuntime,
-                string runtimeId)
+                string runtimeId,
+                bool isNone = false)
             {
                 PresetName = presetName;
                 OptionLabel = optionLabel;
                 Recipe = recipe;
                 IsRuntime = isRuntime;
                 RuntimeId = runtimeId;
+                IsNone = isNone;
             }
 
             public string PresetName { get; }
@@ -864,6 +1449,7 @@ namespace Sol.CharacterCustomization
             public CharacterRecipe Recipe { get; }
             public bool IsRuntime { get; }
             public string RuntimeId { get; }
+            public bool IsNone { get; }
 
             public static PresetOption FromAuthored(CharacterPreset preset)
             {

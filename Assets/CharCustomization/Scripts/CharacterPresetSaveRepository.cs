@@ -17,6 +17,7 @@ namespace Sol.CharacterCustomization
             out RuntimeCharacterPresetRecord savedRecord,
             out bool duplicateName,
             out string error);
+        bool TryDeletePreset(string presetId, out string deletedPresetName, out string error);
     }
 
     [Serializable]
@@ -199,6 +200,42 @@ namespace Sol.CharacterCustomization
             }
 
             return TryWrite(data, out error);
+        }
+
+        public bool TryDeletePreset(string presetId, out string deletedPresetName, out string error)
+        {
+            deletedPresetName = null;
+            error = null;
+
+            string trimmedId = presetId?.Trim();
+            if (string.IsNullOrEmpty(trimmedId))
+            {
+                error = "Select a saved preset before deleting.";
+                return false;
+            }
+
+            if (!TryLoad(out CharacterPresetSaveData data, out error))
+            {
+                return false;
+            }
+
+            List<RuntimeCharacterPresetRecord> presets = data.MutablePresets;
+            for (int index = 0; index < presets.Count; index++)
+            {
+                RuntimeCharacterPresetRecord candidate = presets[index];
+                if (candidate == null ||
+                    !string.Equals(candidate.Id, trimmedId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                deletedPresetName = candidate.PresetName;
+                presets.RemoveAt(index);
+                return TryWrite(data, out error);
+            }
+
+            error = "The selected saved preset could not be found.";
+            return false;
         }
 
         private bool TryWrite(CharacterPresetSaveData data, out string error)

@@ -34,6 +34,7 @@ namespace Sol.CharacterCustomization
 
         public event Action<PlayerCharacterRecord> Finalized;
 
+        public TMP_InputField CharacterNameInput => characterNameInput;
         public Camera GameplayCamera => gameplayCamera;
         public Behaviour GameplayController => gameplayController;
         public ICharacterPlayerSaveRepository Repository => repository;
@@ -49,10 +50,16 @@ namespace Sol.CharacterCustomization
             if (gameplayCamera != null)
             {
                 gameplayCamera.enabled = false;
+                SetAudioListenerEnabled(gameplayCamera, false);
             }
 
             if (gameplayController != null)
             {
+                if (gameplayController is DemoPlayerController demoPlayerController)
+                {
+                    demoPlayerController.SetGameplayInputEnabled(false);
+                }
+
                 gameplayController.enabled = false;
             }
         }
@@ -136,6 +143,14 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
+            if (!TryPrepareGameplayController(out string controllerError))
+            {
+                SetStatus(
+                    $"Saved {record.PlayerName}. {controllerError}",
+                    true);
+                return;
+            }
+
             if (!previewControls.BlendTo(gameplayCamera, transitionDuration, CompleteGameplayHandoff))
             {
                 SetStatus(
@@ -157,6 +172,11 @@ namespace Sol.CharacterCustomization
         {
             if (gameplayController != null)
             {
+                if (gameplayController is DemoPlayerController demoPlayerController)
+                {
+                    demoPlayerController.SetGameplayInputEnabled(true);
+                }
+
                 gameplayController.enabled = true;
             }
 
@@ -197,6 +217,34 @@ namespace Sol.CharacterCustomization
             }
 
             return true;
+        }
+
+        private bool TryPrepareGameplayController(out string error)
+        {
+            error = null;
+            if (gameplayController is not DemoPlayerController demoPlayerController)
+            {
+                return true;
+            }
+
+            CharacterMorphController controller = profile != null ? profile.Controller : null;
+            if (controller == null || !controller.TryGetActiveAnimator(out Animator activeAnimator))
+            {
+                error = "The active character body has no Animator, so gameplay control could not start.";
+                return false;
+            }
+
+            demoPlayerController.BindAnimator(activeAnimator);
+            demoPlayerController.SetGameplayInputEnabled(false);
+            return true;
+        }
+
+        private static void SetAudioListenerEnabled(Camera targetCamera, bool enabled)
+        {
+            if (targetCamera != null && targetCamera.TryGetComponent(out AudioListener listener))
+            {
+                listener.enabled = enabled;
+            }
         }
 
         private void SetCustomizationInteractable(bool interactable)
