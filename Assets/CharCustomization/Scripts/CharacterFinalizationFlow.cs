@@ -14,6 +14,8 @@ namespace Sol.CharacterCustomization
         [Header("Interface")]
         [SerializeField] private TMP_InputField characterNameInput;
         [SerializeField] private Button randomizeButton;
+        [SerializeField] private Button randomizeNameButton;
+        [SerializeField] private CharacterNameList nameList;
         [SerializeField] private Button finalizeButton;
         [SerializeField] private TMP_Text finalizeButtonLabel;
         [SerializeField] private TMP_Text statusLabel;
@@ -87,6 +89,30 @@ namespace Sol.CharacterCustomization
             demoUI?.RefreshSkinPanel();
             ClearOverwriteConfirmation();
             SetStatus("Character randomized.", false);
+        }
+
+        public void RandomizeName()
+        {
+            if (characterNameInput == null)
+            {
+                Debug.LogWarning("The character name input is not assigned.", this);
+                return;
+            }
+
+            if (nameList == null)
+            {
+                Debug.LogWarning("No character name list is assigned.", this);
+                return;
+            }
+
+            if (!nameList.TryGetRandomName(out string randomName))
+            {
+                Debug.LogWarning("The assigned character name list has no usable names.", nameList);
+                return;
+            }
+
+            characterNameInput.text = randomName;
+            ClearOverwriteConfirmation();
         }
 
         public void SetPlayerSaveRepository(ICharacterPlayerSaveRepository saveRepository)
@@ -254,6 +280,11 @@ namespace Sol.CharacterCustomization
                 randomizeButton.interactable = interactable;
             }
 
+            if (randomizeNameButton != null)
+            {
+                randomizeNameButton.interactable = interactable;
+            }
+
             if (finalizeButton != null)
             {
                 finalizeButton.interactable = interactable;
@@ -267,14 +298,31 @@ namespace Sol.CharacterCustomization
 
         private void RegisterListeners()
         {
-            if (listenersRegistered || characterNameInput == null || randomizeButton == null || finalizeButton == null)
+            if (listenersRegistered)
             {
                 return;
             }
 
-            characterNameInput.onValueChanged.AddListener(OnCharacterNameChanged);
-            randomizeButton.onClick.AddListener(Randomize);
-            finalizeButton.onClick.AddListener(FinalizeCharacter);
+            if (characterNameInput != null)
+            {
+                characterNameInput.onValueChanged.AddListener(OnCharacterNameChanged);
+            }
+
+            if (randomizeButton != null)
+            {
+                randomizeButton.onClick.AddListener(Randomize);
+            }
+
+            if (randomizeNameButton != null)
+            {
+                randomizeNameButton.onClick.AddListener(RandomizeName);
+            }
+
+            if (finalizeButton != null)
+            {
+                finalizeButton.onClick.AddListener(FinalizeCharacter);
+            }
+
             listenersRegistered = true;
         }
 
@@ -285,9 +333,26 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            characterNameInput.onValueChanged.RemoveListener(OnCharacterNameChanged);
-            randomizeButton.onClick.RemoveListener(Randomize);
-            finalizeButton.onClick.RemoveListener(FinalizeCharacter);
+            if (characterNameInput != null)
+            {
+                characterNameInput.onValueChanged.RemoveListener(OnCharacterNameChanged);
+            }
+
+            if (randomizeButton != null)
+            {
+                randomizeButton.onClick.RemoveListener(Randomize);
+            }
+
+            if (randomizeNameButton != null)
+            {
+                randomizeNameButton.onClick.RemoveListener(RandomizeName);
+            }
+
+            if (finalizeButton != null)
+            {
+                finalizeButton.onClick.RemoveListener(FinalizeCharacter);
+            }
+
             listenersRegistered = false;
         }
 

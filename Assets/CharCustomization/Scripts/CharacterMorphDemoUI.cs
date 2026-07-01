@@ -208,6 +208,12 @@ namespace Sol.CharacterCustomization
                 presetNameInput.SetTextWithoutNotify(presetName);
             }
 
+            TMP_InputField characterNameInput = GetCharacterNameInput();
+            if (characterNameInput != null)
+            {
+                characterNameInput.SetTextWithoutNotify(presetName);
+            }
+
             RefreshPanel();
             PresetLoaded?.Invoke(presetName, recipe);
             error = null;
@@ -1293,6 +1299,11 @@ namespace Sol.CharacterCustomization
                 return presetNameInput;
             }
 
+            return GetCharacterNameInput();
+        }
+
+        private TMP_InputField GetCharacterNameInput()
+        {
             CharacterFinalizationFlow finalizationFlow = GetComponent<CharacterFinalizationFlow>();
             return finalizationFlow != null ? finalizationFlow.CharacterNameInput : null;
         }
