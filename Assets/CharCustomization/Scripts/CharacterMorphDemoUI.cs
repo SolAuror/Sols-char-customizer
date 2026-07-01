@@ -28,6 +28,7 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Button savePresetButton;
         [SerializeField] private Button loadPresetButton;
         [SerializeField] private Button deletePresetButton;
+        [SerializeField] private CharacterConfirmationPrompt confirmationPrompt;
         [SerializeField] private Button resetAllButton;
         [SerializeField] private Button resetGroupButton;
         [SerializeField] private TMP_Text resetGroupButtonLabel;
@@ -65,6 +66,7 @@ namespace Sol.CharacterCustomization
 
         private static readonly Color AccentColor = new(0.82f, 0.73f, 0.55f, 1f);
         private static readonly Color InactiveColor = new(0.27f, 0.27f, 0.27f, 1f);
+        private const string DeletePresetConfirmationKey = "delete_character_preset";
 
         public event Action<RuntimeCharacterPresetRecord> RuntimePresetSaved;
         public event Action<string, CharacterRecipe> PresetLoaded;
@@ -369,6 +371,7 @@ namespace Sol.CharacterCustomization
             RepairNamedComponent(ref savePresetButton, "savePresetButton", "Save Preset Button");
             RepairNamedComponent(ref loadPresetButton, "loadPresetButton", "Load Preset Button");
             RepairNamedComponent(ref deletePresetButton, "deletePresetButton", "Delete Preset Button", "Delete Current", "Delete Current Button");
+            confirmationPrompt ??= GetComponentInChildren<CharacterConfirmationPrompt>(true);
             RepairNamedComponent(ref resetAllButton, "resetAllButton", "Reset All Button");
             RepairNamedComponent(ref resetGroupButton, "resetGroupButton", "Reset Tab Button", "Reset Group Button");
             RepairNamedComponent(ref skinSwatchScrollRect, "skinSwatchScrollRect", "Skin Scroll View");
@@ -962,8 +965,26 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
+            if (confirmationPrompt == null)
+            {
+                Debug.LogWarning("Assign a confirmation prompt before deleting presets.", this);
+                RefreshPresetControls();
+                return;
+            }
+
+            string presetName = preset.PresetName;
+            string runtimeId = preset.RuntimeId;
+            confirmationPrompt.Show(
+                DeletePresetConfirmationKey,
+                "Delete Preset",
+                $"Delete '{presetName}'? This cannot be undone.",
+                () => DeleteRuntimePreset(runtimeId));
+        }
+
+        private void DeleteRuntimePreset(string runtimePresetId)
+        {
             EnsurePresetRepository();
-            if (!presetRepository.TryDeletePreset(preset.RuntimeId, out string deletedPresetName, out string error))
+            if (!presetRepository.TryDeletePreset(runtimePresetId, out string deletedPresetName, out string error))
             {
                 Debug.LogWarning(error, this);
                 RefreshPresetControls();
