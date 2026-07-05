@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -127,7 +127,7 @@ namespace Sol.CharacterCustomization
 
         public CharacterMorphSliderRow CreateSliderForMorph(string morphId)
         {
-            if (!CharacterMorphCatalog.TryGet(morphId, out CharacterMorphDefinition definition))
+            if (controller == null || !controller.TryGetDefinition(morphId, out CharacterMorphDefinition definition) || !definition.VisibleInCreator)
             {
                 Debug.LogWarning($"Cannot create UI for unknown character morph '{morphId}'.", this);
                 return null;
@@ -341,6 +341,11 @@ namespace Sol.CharacterCustomization
 
             foreach (CharacterMorphDefinition definition in controller.Definitions)
             {
+                if (!definition.VisibleInCreator)
+                {
+                    continue;
+                }
+
                 if (!rows.ContainsKey(definition.Id))
                 {
                     CreateSliderForMorph(definition.Id);
@@ -1063,7 +1068,7 @@ namespace Sol.CharacterCustomization
                     continue;
                 }
 
-                if (!CharacterMorphCatalog.TryGet(row.MorphId, out CharacterMorphDefinition definition))
+                if (controller == null || !controller.TryGetDefinition(row.MorphId, out CharacterMorphDefinition definition) || !definition.VisibleInCreator)
                 {
                     Debug.LogWarning($"Disabled UI row with unknown morph ID '{row.MorphId}'.", row);
                     row.gameObject.SetActive(false);
@@ -1344,7 +1349,9 @@ namespace Sol.CharacterCustomization
             foreach (KeyValuePair<string, CharacterMorphSliderRow> pair in rows)
             {
                 bool visible = showingMorphs &&
-                               CharacterMorphCatalog.TryGet(pair.Key, out CharacterMorphDefinition definition) &&
+                               controller != null &&
+                               controller.TryGetDefinition(pair.Key, out CharacterMorphDefinition definition) &&
+                               definition.VisibleInCreator &&
                                definition.Group == selectedGroup;
                 pair.Value.gameObject.SetActive(visible);
                 if (visible)
@@ -1921,11 +1928,17 @@ namespace Sol.CharacterCustomization
             }
         }
 
-        private static int GetCatalogOrder(string morphId)
+        private int GetCatalogOrder(string morphId)
         {
-            for (int index = 0; index < CharacterMorphCatalog.Definitions.Count; index++)
+            if (controller == null)
             {
-                if (CharacterMorphCatalog.Definitions[index].Id == morphId)
+                return int.MaxValue;
+            }
+
+            IReadOnlyList<CharacterMorphDefinition> definitions = controller.Definitions;
+            for (int index = 0; index < definitions.Count; index++)
+            {
+                if (definitions[index].Id == morphId)
                 {
                     return index;
                 }
@@ -1988,3 +2001,6 @@ namespace Sol.CharacterCustomization
         }
     }
 }
+
+
+

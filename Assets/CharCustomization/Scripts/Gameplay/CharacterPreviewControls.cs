@@ -53,14 +53,9 @@ namespace Sol.CharacterCustomization
                 controller = GetComponent<CharacterMorphController>();
             }
 
-            if (previewCamera == null)
-            {
-                previewCamera = Camera.main;
-            }
-
             if (controller == null || previewCamera == null)
             {
-                Debug.LogError("Character preview controls require a morph controller and preview camera.", this);
+                Debug.LogError("Character preview controls require a morph controller and explicitly assigned preview camera.", this);
                 enabled = false;
                 return;
             }

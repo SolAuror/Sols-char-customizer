@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51780eea64b4a3b97d6b7075ed46a88, type: 3}
+  m_Name: CharacterRigProportionProfile
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterRigProportionProfile
+  channelRanges:
+  - channel: 1
+    minimumScale: -1
+    maximumScale: 1

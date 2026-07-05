@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Sol.CharacterCustomization
 {
@@ -9,6 +10,37 @@ namespace Sol.CharacterCustomization
         Male
     }
 
+    public enum CharacterMorphDriverType
+    {
+        BlendShape,
+        BoneScale,
+        BoneOffset,
+        RigParameter
+    }
+
+    public enum CharacterRigProportionChannel
+    {
+        None,
+        Height,
+        ShoulderWidth,
+        HipsWidth,
+        UpperBody,
+        LowerBody,
+        Spine,
+        Chest,
+        Waist,
+        Head,
+        Neck,
+        Shoulders,
+        UpperArms,
+        LowerArms,
+        Hands,
+        Fingers,
+        Legs,
+        Feet,
+        FootRadius
+    }
+
     public abstract class CharacterMorphDefinition
     {
         protected CharacterMorphDefinition(
@@ -16,25 +48,36 @@ namespace Sol.CharacterCustomization
             string label,
             string group,
             string baseShapeName,
+            CharacterMorphDriverType driverType = CharacterMorphDriverType.BlendShape,
             string femaleBaseShapeName = null,
-            string maleBaseShapeName = null)
+            string maleBaseShapeName = null,
+            bool visibleInCreator = true,
+            CharacterRigProportionChannel rigChannel = CharacterRigProportionChannel.None)
         {
             Id = id;
             Label = label;
             Group = group;
             BaseShapeName = baseShapeName;
+            DriverType = driverType;
             FemaleBaseShapeName = femaleBaseShapeName;
             MaleBaseShapeName = maleBaseShapeName;
+            VisibleInCreator = visibleInCreator;
+            RigChannel = rigChannel;
         }
 
         public string Id { get; }
         public string Label { get; }
         public string Group { get; }
         public string BaseShapeName { get; }
+        public CharacterMorphDriverType DriverType { get; }
         public string FemaleBaseShapeName { get; }
         public string MaleBaseShapeName { get; }
+        public bool VisibleInCreator { get; }
+        public CharacterRigProportionChannel RigChannel { get; }
         public abstract bool RequiresNegativeShape { get; }
         public bool IsBipolar => RequiresNegativeShape;
+        public bool IsBlendShapeDriven => DriverType == CharacterMorphDriverType.BlendShape;
+        public bool IsSkeletalDriven => DriverType != CharacterMorphDriverType.BlendShape;
         public abstract float MinimumValue { get; }
 
         public virtual string GetPositiveShape(CharacterSex sex)
@@ -68,9 +111,12 @@ namespace Sol.CharacterCustomization
             string label,
             string group,
             string baseShapeName,
+            CharacterMorphDriverType driverType = CharacterMorphDriverType.BlendShape,
             string femaleBaseShapeName = null,
-            string maleBaseShapeName = null)
-            : base(id, label, group, baseShapeName, femaleBaseShapeName, maleBaseShapeName)
+            string maleBaseShapeName = null,
+            bool visibleInCreator = true,
+            CharacterRigProportionChannel rigChannel = CharacterRigProportionChannel.None)
+            : base(id, label, group, baseShapeName, driverType, femaleBaseShapeName, maleBaseShapeName, visibleInCreator, rigChannel)
         {
         }
 
@@ -99,9 +145,12 @@ namespace Sol.CharacterCustomization
             string label,
             string group,
             string baseShapeName,
+            CharacterMorphDriverType driverType = CharacterMorphDriverType.BlendShape,
             string femalePositiveShapeName = null,
-            string malePositiveShapeName = null)
-            : base(id, label, group, baseShapeName)
+            string malePositiveShapeName = null,
+            bool visibleInCreator = true,
+            CharacterRigProportionChannel rigChannel = CharacterRigProportionChannel.None)
+            : base(id, label, group, baseShapeName, driverType, null, null, visibleInCreator, rigChannel)
         {
             this.femalePositiveShapeName = femalePositiveShapeName;
             this.malePositiveShapeName = malePositiveShapeName;
@@ -137,6 +186,86 @@ namespace Sol.CharacterCustomization
         }
     }
 
+    [Serializable]
+    public sealed class CharacterMorphCatalogEntry
+    {
+        [SerializeField] private string id;
+        [SerializeField] private string label;
+        [SerializeField] private string group;
+        [SerializeField] private string baseShapeName;
+        [SerializeField] private CharacterMorphDriverType driverType = CharacterMorphDriverType.BlendShape;
+        [SerializeField] private bool requiresNegativeShape = true;
+        [SerializeField] private string femaleBaseShapeName;
+        [SerializeField] private string maleBaseShapeName;
+        [SerializeField] private string femalePositiveShapeName;
+        [SerializeField] private string malePositiveShapeName;
+        [SerializeField] private bool visibleInCreator = true;
+        [SerializeField] private CharacterRigProportionChannel rigChannel = CharacterRigProportionChannel.None;
+
+        public CharacterMorphCatalogEntry()
+        {
+        }
+
+        public CharacterMorphCatalogEntry(CharacterMorphDefinition definition)
+        {
+            id = definition.Id;
+            label = definition.Label;
+            group = definition.Group;
+            baseShapeName = definition.BaseShapeName;
+            driverType = definition.DriverType;
+            requiresNegativeShape = definition.RequiresNegativeShape;
+            femaleBaseShapeName = definition.FemaleBaseShapeName;
+            maleBaseShapeName = definition.MaleBaseShapeName;
+            visibleInCreator = definition.VisibleInCreator;
+            rigChannel = definition.RigChannel;
+
+            if (!requiresNegativeShape)
+            {
+                string femalePositive = definition.GetPositiveShape(CharacterSex.Female);
+                string malePositive = definition.GetPositiveShape(CharacterSex.Male);
+                femalePositiveShapeName = string.Equals(femalePositive, definition.BaseShapeName + "+", StringComparison.Ordinal) ? null : femalePositive;
+                malePositiveShapeName = string.Equals(malePositive, definition.BaseShapeName + "+", StringComparison.Ordinal) ? null : malePositive;
+            }
+        }
+
+        public string Id => id;
+        public string Label => label;
+        public string Group => group;
+        public string BaseShapeName => baseShapeName;
+        public CharacterMorphDriverType DriverType => driverType;
+        public bool RequiresNegativeShape => requiresNegativeShape;
+        public bool VisibleInCreator => visibleInCreator;
+        public CharacterRigProportionChannel RigChannel => rigChannel;
+
+        public CharacterMorphDefinition ToDefinition()
+        {
+            if (requiresNegativeShape)
+            {
+                return new BipolarMorphDefinition(
+                    id,
+                    label,
+                    group,
+                    baseShapeName,
+                    driverType,
+                    femaleBaseShapeName,
+                    maleBaseShapeName,
+                    visibleInCreator,
+                    rigChannel);
+            }
+
+            return new PositiveOnlyMorphDefinition(
+                id,
+                label,
+                group,
+                baseShapeName,
+                driverType,
+                femalePositiveShapeName,
+                malePositiveShapeName,
+                visibleInCreator,
+                rigChannel);
+        }
+    }
+
     public sealed class StatGrowthDefinition
     {
         public StatGrowthDefinition(
@@ -168,19 +297,30 @@ namespace Sol.CharacterCustomization
 
     public static class CharacterMorphCatalog
     {
+        public const string RigBackendGroup = "Rig Backend";
+
         private static readonly CharacterMorphDefinition[] Morphs =
         {
             new PositiveOnlyMorphDefinition(
                 "body.muscle", "Muscle", "Body", "Body_Stat_Muscle",
                 femalePositiveShapeName: "Body_Stat_Muscle"),
             new BipolarMorphDefinition("body.weight", "Body Weight", "Body", "Body_Stat_Weight"),
-            new BipolarMorphDefinition("body.height", "Height", "Body", "Body_Height"),
+            new BipolarMorphDefinition(
+                "body.height", "Height", "Body", "Body_Height",
+                driverType: CharacterMorphDriverType.BoneScale,
+                rigChannel: CharacterRigProportionChannel.Height),
             new PositiveOnlyMorphDefinition("body.breast", "Breast", "Body", "Body_Breast"),
             new BipolarMorphDefinition("body.glutes", "Glutes", "Body", "Body_Glutes"),
-            new BipolarMorphDefinition("body.shoulder_width", "Shoulder Width", "Body", "Body_ShoulderWidth"),
+            new BipolarMorphDefinition(
+                "body.shoulder_width", "Shoulder Width", "Body", "Body_ShoulderWidth",
+                driverType: CharacterMorphDriverType.BoneOffset,
+                rigChannel: CharacterRigProportionChannel.ShoulderWidth),
             new BipolarMorphDefinition("body.chest_width", "Chest Width", "Body", "Body_ChestWidth"),
             new BipolarMorphDefinition("body.waist", "Waist", "Body", "Body_Waist"),
-            new BipolarMorphDefinition("body.hips", "Hips", "Body", "Body_Hips"),
+            new BipolarMorphDefinition(
+                "body.hips", "Hips", "Body", "Body_Hips",
+                driverType: CharacterMorphDriverType.BoneOffset,
+                rigChannel: CharacterRigProportionChannel.HipsWidth),
             new BipolarMorphDefinition("head.weight", "Head Weight", "Body", "Head_Stat_Weight"),
 
             new BipolarMorphDefinition("head.jaw.bite", "Jaw Bite", "Jaw / Chin", "Head_Jaw_Bite"),
@@ -222,10 +362,26 @@ namespace Sol.CharacterCustomization
                 "Neck / Ears",
                 "Head_Ear_Rotation",
                 femaleBaseShapeName: "Head_Ears_Rotation",
-                maleBaseShapeName: "Head_Ear_Rotation")
+                maleBaseShapeName: "Head_Ear_Rotation"),
+
+            HiddenRig("rig.upper_body", "Upper Body", CharacterRigProportionChannel.UpperBody),
+            HiddenRig("rig.lower_body", "Lower Body", CharacterRigProportionChannel.LowerBody),
+            HiddenRig("rig.spine", "Spine", CharacterRigProportionChannel.Spine),
+            HiddenRig("rig.chest", "Chest", CharacterRigProportionChannel.Chest),
+            HiddenRig("rig.waist", "Waist", CharacterRigProportionChannel.Waist),
+            HiddenRig("rig.head", "Head Scale", CharacterRigProportionChannel.Head),
+            HiddenRig("rig.neck", "Neck Scale", CharacterRigProportionChannel.Neck),
+            HiddenRig("rig.shoulders", "Shoulder Scale", CharacterRigProportionChannel.Shoulders),
+            HiddenRig("rig.upper_arms", "Upper Arms", CharacterRigProportionChannel.UpperArms),
+            HiddenRig("rig.lower_arms", "Lower Arms", CharacterRigProportionChannel.LowerArms),
+            HiddenRig("rig.hands", "Hands", CharacterRigProportionChannel.Hands),
+            HiddenRig("rig.fingers", "Fingers", CharacterRigProportionChannel.Fingers),
+            HiddenRig("rig.legs", "Legs", CharacterRigProportionChannel.Legs),
+            HiddenRig("rig.feet", "Feet", CharacterRigProportionChannel.Feet),
+            HiddenRig("rig.foot_radius", "Foot Radius", CharacterRigProportionChannel.FootRadius, CharacterMorphDriverType.RigParameter)
         };
 
-        private static readonly Dictionary<string, CharacterMorphDefinition> ById = BuildLookup();
+        private static readonly Dictionary<string, CharacterMorphDefinition> ById = BuildLookup(Morphs);
 
         public static IReadOnlyList<CharacterMorphDefinition> Definitions => Morphs;
 
@@ -234,15 +390,51 @@ namespace Sol.CharacterCustomization
             return ById.TryGetValue(id, out definition);
         }
 
-        private static Dictionary<string, CharacterMorphDefinition> BuildLookup()
+        public static bool TryGet(IReadOnlyList<CharacterMorphDefinition> definitions, string id, out CharacterMorphDefinition definition)
+        {
+            definition = null;
+            if (definitions == null || string.IsNullOrWhiteSpace(id))
+            {
+                return false;
+            }
+
+            for (int index = 0; index < definitions.Count; index++)
+            {
+                if (string.Equals(definitions[index].Id, id, StringComparison.Ordinal))
+                {
+                    definition = definitions[index];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        internal static Dictionary<string, CharacterMorphDefinition> BuildLookup(IReadOnlyList<CharacterMorphDefinition> definitions)
         {
             var lookup = new Dictionary<string, CharacterMorphDefinition>(StringComparer.Ordinal);
-            foreach (CharacterMorphDefinition morph in Morphs)
+            foreach (CharacterMorphDefinition morph in definitions)
             {
                 lookup.Add(morph.Id, morph);
             }
 
             return lookup;
+        }
+
+        private static BipolarMorphDefinition HiddenRig(
+            string id,
+            string label,
+            CharacterRigProportionChannel channel,
+            CharacterMorphDriverType driverType = CharacterMorphDriverType.BoneScale)
+        {
+            return new BipolarMorphDefinition(
+                id,
+                label,
+                RigBackendGroup,
+                string.Empty,
+                driverType: driverType,
+                visibleInCreator: false,
+                rigChannel: channel);
         }
     }
 

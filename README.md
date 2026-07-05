@@ -13,7 +13,7 @@
 
 This project builds a scalable character customization system for adventure-style Unity games. The goal is to let a host game create, edit, save, reload, and finalize a character without depending directly on imported FBX blendshape names.
 
-The public system talks in stable IDs such as `body.weight` and `body.muscle`. Model-specific MPFB blendshape names stay inside `CharacterMorphCatalog`, so the UI, save data, and host-game API can remain readable and reusable.
+The public system talks in stable IDs such as `body.weight`, `body.muscle`, and `body.height`. Model-specific MPFB blendshape names stay inside the morph catalog, so the UI, save data, and host-game API can remain readable and reusable. Surface morphs are handled by blendshapes; skeletal proportion morphs are routed through the rig driver.
 
 <p align="center">
   <img src="Assets/CharCustomization/image.png" alt="Runtime character customization menu with morph sliders and character preview" width="900">
@@ -23,8 +23,12 @@ The public system talks in stable IDs such as `body.weight` and `body.muscle`. M
 
 - Male and female MPFB character variants with independent recipes.
 - Stable morph IDs across body and face controls.
+- Authored `CharacterMorphCatalogAsset` with static fallback definitions.
 - Bipolar morphs for negative/positive shape pairs.
 - Positive-only morphs for one-way controls such as muscle.
+- Separated blendshape and skeletal-proportion driver paths.
+- Hidden BodyMorphLite-style rig backend channels for testing broader proportions.
+- Optional foot grounding and Animator IK bridge for proportion-aware animation.
 - Skin swatches and custom skin colour support.
 - Authored Unity UI prefab with tabbed morph groups.
 - Runtime preset save/load through JSON.
@@ -35,16 +39,17 @@ The public system talks in stable IDs such as `body.weight` and `body.muscle`. M
 ## System Flow
 
 <p align="center">
-  <img src="Documentation/Media/system-flowchart.png" alt="System flowchart for runtime character creation" width="900">
+  <img src="Documentation/Images/system-flowchart.png" alt="System flowchart for runtime character creation" width="900">
 </p>
 
 Runtime flow:
 
 1. The player changes tabs, sliders, skin, presets, or finalization controls.
 2. `CharacterMorphDemoUI` routes those requests to the profile, controller, or save repositories.
-3. `CharacterMorphController` resolves stable IDs and applies blendshape weights to the active character.
-4. `CharacterProfile` captures and reapplies reusable `CharacterRecipe` data.
-5. Runtime presets and finalized players are saved through default JSON repositories, or through host-provided repositories.
+3. `CharacterMorphController` resolves stable IDs through the assigned catalog asset or static fallback.
+4. Blendshape definitions apply mesh weights; skeletal definitions apply bind-pose-safe bone scale or offset through `CharacterRigProportionDriver`.
+5. `CharacterProfile` captures and reapplies reusable `CharacterRecipe` data.
+6. Runtime presets and finalized players are saved through default JSON repositories, or through host-provided repositories.
 
 ## Project Requirements Covered
 
@@ -74,10 +79,14 @@ The demo currently uses MPFB-generated character assets. MPFB-specific names are
 | Script | Responsibility |
 | --- | --- |
 | `CharacterMorphController` | Active sex, morph values, stat growth, and blendshape application. |
-| `CharacterMorphCatalog` | Stable morph IDs, labels, groups, ranges, and MPFB shape mappings. |
+| `CharacterMorphCatalog` | Static fallback definitions for stable IDs, labels, groups, ranges, and MPFB shape mappings. |
+| `CharacterMorphCatalogAsset` | Authored catalog asset used by prefabs when present. |
 | `CharacterMorphDefinition` | Abstract base contract for morph behaviour. |
 | `BipolarMorphDefinition` | Negative-to-positive morphs using paired blendshapes. |
 | `PositiveOnlyMorphDefinition` | Zero-to-one morphs using one blendshape. |
+| `CharacterRigProportionDriver` | Bind-pose-safe skeletal proportion driver and optional BML-style foot grounding. |
+| `CharacterRigProportionProfile` | Authored min/max scale ranges for BML-style rig channels. |
+| `CharacterRigAnimatorIkBridge` | `OnAnimatorIK` bridge on the active character Animator object. |
 | `CharacterProfile` | Captures and applies complete character recipes. |
 | `CharacterMorphDemoUI` | Coordinates tabs, sliders, skin, presets, and authored menu controls. |
 | `CharacterFinalizationFlow` | Saves named player records and optionally hands off to gameplay camera control. |
@@ -117,13 +126,14 @@ controller.SetStatGrowth("body_fat", normalizedBodyFat);
 
 ## Validation
 
-Run the editor validator before presenting, packaging, or handing off the project:
+Run the editor validators before presenting, packaging, or handing off the project:
 
 ```text
 Tools > Character Customization > Validate Morph Demo
+Tools > Sol > Character Customization > Validate Selected Character Setup
 ```
 
-The validator checks authored menu wiring, morph catalogue coverage, skin palette setup, preset references, finalization references, scene wiring, and expected UI input links.
+The demo validator checks authored menu wiring, morph catalog coverage, skin palette setup, preset references, finalization references, scene wiring, and expected UI input links. The setup validator checks active roots, humanoid Animators, catalog validity, required bones, blendshape bindings, IK bridge presence, and Animator Controller IK Pass when grounding is enabled.
 
 For code-level checks:
 
@@ -136,12 +146,16 @@ dotnet build Assembly-CSharp-Editor.csproj -nologo
 
 - [`Documentation/CharacterCustomization.md`](Documentation/CharacterCustomization.md) records current design decisions, validation notes, and next steps.
 - [`Documentation/SystemPresentationArchitecture.md`](Documentation/SystemPresentationArchitecture.md) contains the architecture notes and pseudocode used for the system presentation.
+- [`Documentation/ThirdPartyNotices.md`](Documentation/ThirdPartyNotices.md) records BodyMorphLite attribution and MIT notice requirements for adapted rig/IK behavior.
 
 ## Current Scope
 
 Included in this iteration:
 
 - Character morph sliders and tabbed categories.
+- Catalog asset foundation with static fallback definitions.
+- Skeletal proportion backend for height, shoulders, hips, and hidden BML-style rig channels.
+- Inspector-only BML backend controls for testing.
 - Stable recipe capture and application.
 - Authored and runtime presets.
 - Runtime JSON saving for presets and finalized players.
@@ -152,10 +166,12 @@ Included in this iteration:
 Not included yet:
 
 - Package metadata and assembly-definition split.
-- Serialized morph profiles for non-MPFB character packs.
-- Eye, hair, clothing, or equipment selectors.
+- Clean package extraction into runtime, UGUI, editor, tests, and samples boundaries.
+- Verified plug-and-play setup on a brand-new humanoid character.
+- Full Play Mode IK parity tests for flat ground, steps, sex switching, and finalize handoff.
+- Hair, clothing, or equipment selectors.
 - Full installation, licence, version, and changelog files for distribution.
 
 ## Status
 
-The system is presentation-ready for the GAD176 Project 1 prototype brief, with remaining work focused on packaging, broader automated test coverage, and replacing the hardcoded MPFB catalogue with serialized profiles.
+The system is presentation-ready for the GAD176 Project 1 prototype brief and now has the core BodyMorphLite-style rig backend merged in a CharacterEditor-safe way. Remaining work is focused on Unity Play Mode validation, package boundary cleanup, demo asset separation, licensing audit, and broader automated test coverage.

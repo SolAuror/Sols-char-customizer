@@ -1,0 +1,651 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56dd356d61c648148912f344c3ef70a8, type: 3}
+  m_Name: DefaultMorphCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterMorphCatalogAsset
+  morphs:
+  - id: body.muscle
+    label: Muscle
+    group: Body
+    baseShapeName: Body_Stat_Muscle
+    driverType: 0
+    requiresNegativeShape: 0
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: Body_Stat_Muscle
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: body.weight
+    label: Body Weight
+    group: Body
+    baseShapeName: Body_Stat_Weight
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: body.height
+    label: Height
+    group: Body
+    baseShapeName: Body_Height
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 1
+  - id: body.breast
+    label: Breast
+    group: Body
+    baseShapeName: Body_Breast
+    driverType: 0
+    requiresNegativeShape: 0
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: body.glutes
+    label: Glutes
+    group: Body
+    baseShapeName: Body_Glutes
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: body.shoulder_width
+    label: Shoulder Width
+    group: Body
+    baseShapeName: Body_ShoulderWidth
+    driverType: 2
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 2
+  - id: body.chest_width
+    label: Chest Width
+    group: Body
+    baseShapeName: Body_ChestWidth
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: body.waist
+    label: Waist
+    group: Body
+    baseShapeName: Body_Waist
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: body.hips
+    label: Hips
+    group: Body
+    baseShapeName: Body_Hips
+    driverType: 2
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 3
+  - id: head.weight
+    label: Head Weight
+    group: Body
+    baseShapeName: Head_Stat_Weight
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.jaw.bite
+    label: Jaw Bite
+    group: Jaw / Chin
+    baseShapeName: Head_Jaw_Bite
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.jaw.shape
+    label: Jaw Shape
+    group: Jaw / Chin
+    baseShapeName: Head_Jaw_Shape
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.chin.position
+    label: Chin Position
+    group: Jaw / Chin
+    baseShapeName: Head_Chin_Pos
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.chin.point
+    label: Chin Point
+    group: Jaw / Chin
+    baseShapeName: Head_Chin_Point
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.chin.width
+    label: Chin Width
+    group: Jaw / Chin
+    baseShapeName: Head_Chin_Width
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.mouth.width
+    label: Mouth Width
+    group: Mouth
+    baseShapeName: Head_Mouth_Width
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.mouth.fullness
+    label: Mouth Fullness
+    group: Mouth
+    baseShapeName: Head_Mouth_Full
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.mouth.forward
+    label: Mouth Forward
+    group: Mouth
+    baseShapeName: Head_Mouth_Forward
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.mouth.height
+    label: Mouth Height
+    group: Mouth
+    baseShapeName: Head_Mouth_Height
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.nose.width
+    label: Nose Width
+    group: Nose
+    baseShapeName: Head_Nose_Width
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.nose.curve
+    label: Nose Curve
+    group: Nose
+    baseShapeName: Head_Nose_Curve
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.nose.depth
+    label: Nose Depth
+    group: Nose
+    baseShapeName: Head_Nose_Depth
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.nose.forward
+    label: Nose Forward
+    group: Nose
+    baseShapeName: Head_Nose_Forward
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.nose.septum_angle
+    label: Septum Angle
+    group: Nose
+    baseShapeName: Head_Nose_SeptumAngle
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.cheekbone.width
+    label: Cheekbone Width
+    group: Cheeks
+    baseShapeName: Head_Cheekbone_Width
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.cheek.fullness
+    label: Cheek Fullness
+    group: Cheeks
+    baseShapeName: Head_Cheek_Full
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyes.bags
+    label: Eye Bags
+    group: Eyes
+    baseShapeName: Head_Eyes_Bags
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyes.openness
+    label: Eye Openness
+    group: Eyes
+    baseShapeName: Head_Eyes_Open
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyes.height
+    label: Eye Height
+    group: Eyes
+    baseShapeName: Head_Eyes_Height
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyes.distance
+    label: Eye Distance
+    group: Eyes
+    baseShapeName: Head_Eyes_Distance
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyes.size
+    label: Eye Size
+    group: Eyes
+    baseShapeName: Head_Eyes_Size
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyes.slant
+    label: Eye Slant
+    group: Eyes
+    baseShapeName: Head_Eyes_Slant
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyebrows.height
+    label: Eyebrow Height
+    group: Brows
+    baseShapeName: Head_Eyebrow_Height
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.eyebrows.angle
+    label: Eyebrow Angle
+    group: Brows
+    baseShapeName: Head_Eyebrow_Angle
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.neck.width
+    label: Neck Width
+    group: Neck / Ears
+    baseShapeName: Head_Neck_Width
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.ears.shape
+    label: Ear Shape
+    group: Neck / Ears
+    baseShapeName: Head_Ear_Shape
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.ears.size
+    label: Ear Size
+    group: Neck / Ears
+    baseShapeName: Head_Ear_Size
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: head.ears.rotation
+    label: Ear Rotation
+    group: Neck / Ears
+    baseShapeName: Head_Ear_Rotation
+    driverType: 0
+    requiresNegativeShape: 1
+    femaleBaseShapeName: Head_Ears_Rotation
+    maleBaseShapeName: Head_Ear_Rotation
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 1
+    rigChannel: 0
+  - id: rig.upper_body
+    label: Upper Body
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 4
+  - id: rig.lower_body
+    label: Lower Body
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 5
+  - id: rig.spine
+    label: Spine
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 6
+  - id: rig.chest
+    label: Chest
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 7
+  - id: rig.waist
+    label: Waist
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 8
+  - id: rig.head
+    label: Head Scale
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 9
+  - id: rig.neck
+    label: Neck Scale
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 10
+  - id: rig.shoulders
+    label: Shoulder Scale
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 11
+  - id: rig.upper_arms
+    label: Upper Arms
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 12
+  - id: rig.lower_arms
+    label: Lower Arms
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 13
+  - id: rig.hands
+    label: Hands
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 14
+  - id: rig.fingers
+    label: Fingers
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 15
+  - id: rig.legs
+    label: Legs
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 16
+  - id: rig.feet
+    label: Feet
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 1
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 17
+  - id: rig.foot_radius
+    label: Foot Radius
+    group: Rig Backend
+    baseShapeName: 
+    driverType: 3
+    requiresNegativeShape: 1
+    femaleBaseShapeName: 
+    maleBaseShapeName: 
+    femalePositiveShapeName: 
+    malePositiveShapeName: 
+    visibleInCreator: 0
+    rigChannel: 18

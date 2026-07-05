@@ -20,9 +20,13 @@ flowchart LR
         Recipes["Female and male recipes<br/>ID to value"]
         Bindings["Resolved morph bindings<br/>ID to mesh targets"]
         Catalog["CharacterMorphCatalog<br/>definitions and FBX name mapping"]
+        CatalogAsset["CharacterMorphCatalogAsset<br/>authored catalog override"]
         Definition["CharacterMorphDefinition<br/>abstract shared contract"]
         Bipolar["BipolarMorphDefinition<br/>negative to positive"]
         Positive["PositiveOnlyMorphDefinition<br/>zero to positive"]
+        RigDriver["CharacterRigProportionDriver<br/>skeletal proportions and grounding"]
+        RigProfile["CharacterRigProportionProfile<br/>BML-style scale ranges"]
+        IkBridge["CharacterRigAnimatorIkBridge<br/>Animator IK entrypoint"]
         Growth["StatGrowthDefinition<br/>stat to morph mapping"]
         Profile["CharacterProfile<br/>capture and apply recipes"]
         Recipe["CharacterRecipe<br/>sex, skin, stable morph values"]
@@ -48,11 +52,17 @@ flowchart LR
     Finalize -->|"CaptureRecipe"| Profile
     Finalize --> Saves
     Finalize --> Preview
+    CatalogAsset -->|"when assigned"| Controller
+    Catalog -->|"fallback definitions"| Controller
     Catalog -->|"labels, ranges, groups"| DemoUI
-    Catalog -->|"logical ID to shape names"| Controller
+    Catalog -->|"logical ID to shape names or rig channels"| Controller
     Catalog --> Definition
     Definition -->|"specialised by"| Bipolar
     Definition -->|"specialised by"| Positive
+    RigProfile --> RigDriver
+    Controller -->|"skeletal definitions"| RigDriver
+    RigDriver --> IkBridge
+    RigDriver --> Roots
     Controller <--> Recipes
     Profile <--> Recipe
     Profile <--> Preset
@@ -63,7 +73,9 @@ flowchart LR
     Roots --> Renderers
 ```
 
-The stable morph ID is the boundary between presentation and model-specific data. For example, the UI uses `body.weight`; only the catalogue needs to know the imported FBX blendshape names. This keeps the controller API readable and reduces direct dependencies on the current character asset.
+The stable morph ID is the boundary between presentation and model-specific data. For example, the UI uses `body.weight`; only the catalog needs to know the imported FBX blendshape names or skeletal rig channel. This keeps the controller API readable and reduces direct dependencies on the current character asset.
+
+Blendshape and skeletal responsibilities are deliberately split. Surface changes such as face, breast, glutes, muscle, and weight drive blendshapes. Proportion changes such as height, shoulder width, hips, and hidden BML-style rig channels drive bones through `CharacterRigProportionDriver`.
 
 `CharacterMorphDefinition` is an abstract base class. Its two concrete subclasses inherit the shared metadata and shape-name lookup, then override the valid range, required blendshapes, and weight calculation. The controller uses the base type and delegates those differences polymorphically.
 
@@ -80,11 +92,16 @@ INITIALISE
     for each character
         find every SkinnedMeshRenderer under its root
         for each catalogue definition
-            resolve positive and negative blendshape indices
-            store the matching renderer targets by stable morph ID
+            if definition is blendshape-driven
+                resolve positive and negative blendshape indices
+                store the matching renderer targets by stable morph ID
+
+    bind the rig driver to the active humanoid root and Animator
+    capture bind pose for required humanoid bones
 
     bind each authored UI row to its catalogue definition
     create a fallback row only when an authored row is missing
+    skip hidden backend definitions in the creator UI
     select the configured default sex and display the default morph group
 ```
 
@@ -97,6 +114,13 @@ SET MORPH(morph ID, requested value)
 
     clamp value to the definition's allowed range
     save value in the active character's recipe
+
+    if definition is skeletal
+        map the recipe value into a rig channel
+        restore affected bones from bind pose
+        apply bone scale or offset through the rig driver
+        update foot and pelvis compensation offsets
+        stop
 
     ask the concrete morph definition to calculate its weights
         bipolar definition maps negative and positive values to separate shapes
@@ -182,7 +206,9 @@ FINALIZE PLAYER
 ## Presentation Summary
 
 - The UI knows stable IDs, labels and ranges, not mesh indices.
+- Hidden BML-style backend channels can be tested in the inspector without becoming creator sliders.
 - The controller encapsulates recipes, character switching and blendshape application.
+- The rig driver owns skeletal proportion changes, bind-pose restore and optional grounding.
 - Inheritance removes morph-type decisions from the controller: each definition owns its behaviour.
 - Stat-growth definitions connect normalized gameplay values to muscle and body-fat morphs without owning progression rules.
 - Male and female recipes are independent and remain in memory while switching.

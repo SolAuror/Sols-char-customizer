@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2584010223268332119}
   - component: {fileID: 5533027457802694159}
+  - component: {fileID: 667402211724877441}
   - component: {fileID: 4876277818347838247}
   - component: {fileID: 7763284161080261142}
   m_Layer: 0
@@ -49,6 +50,41 @@ MonoBehaviour:
   femaleRoot: {fileID: 0}
   maleRoot: {fileID: 0}
   activeSex: 0
+  rigProportionDriver: {fileID: 667402211724877441}
+--- !u!114 &667402211724877441
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3076914116413420698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a6d75020bbf48a6a61d1aa7b732bc21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterRigProportionDriver
+  enableFootIkGrounding: 1
+  footProbeRadius: 0.05
+  footProbeHeight: 0.35
+  minFootProbeHeight: 0.18
+  pelvisOffsetSpeed: 4
+  footIkAdaptSpeed: 6
+  pelvisIkWeight: 0.75
+  footRotationSpeed: 90
+  morphGroundOffsetScale: 0
+  minHeightFootContactOffset: -0.015
+  maxHeightFootContactOffset: 0.005
+  groundingLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  warnWhenIkBridgeMissing: 1
+  enableGroundingDebugDraw: 1
+  probePathColor: {r: 0.25, g: 0.6, b: 1, a: 1}
+  hitPointColor: {r: 0.2, g: 1, b: 0.35, a: 1}
+  missColor: {r: 1, g: 0.35, b: 0.25, a: 1}
+  footTargetColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  normalColor: {r: 0.75, g: 0.35, b: 1, a: 1}
+  pelvisOffsetColor: {r: 1, g: 0.45, b: 0.85, a: 1}
 --- !u!114 &4876277818347838247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -92,6 +128,11 @@ MonoBehaviour:
   skinColorPropertyNames:
   - _BaseColor
   - _Color
+  skinRoughnessPropertyNames:
+  - _Smoothness
+  - _Glossiness
+  invertRoughnessForSmoothness: 1
+  skinRoughness: 0.5
   femaleSkinRenderers:
   - {fileID: 0}
   maleSkinRenderers:

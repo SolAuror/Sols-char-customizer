@@ -3,14 +3,20 @@
 ## Purpose
 This project explores a reusable character customization system for Unity 6.3. The system should remain suitable for integration into varied Unity projects and, when sufficiently mature, for distribution through the Unity Asset Store.
 
-The current architecture diagram and presentation pseudocode are available in [SystemPresentationArchitecture.md](SystemPresentationArchitecture.md).
+The current architecture diagram and presentation pseudocode are available in [SystemPresentationArchitecture.md](SystemPresentationArchitecture.md). Third-party attribution for adapted BodyMorphLite behavior is recorded in [ThirdPartyNotices.md](ThirdPartyNotices.md).
 
 ## Current State
 The demo scene contains male and female MPFB characters with a shared morph and skin interface. One character is displayed at a time and each retains independent in-memory morph values while switching.
 
-The initial implementation exposes 38 body and head controls through stable logical identifiers. Bipolar controls drive the imported positive and negative blendshape pair, while muscle and breast use a zero-to-one range. Bindings are resolved across all skinned renderers beneath the selected character so dependent face and accessory meshes remain aligned.
+The creator UI exposes body and head controls through stable logical identifiers. Bipolar controls drive imported positive and negative blendshape pairs, while positive-only controls use a zero-to-one range. Bindings are resolved across all skinned renderers beneath the selected character so dependent face and accessory meshes remain aligned.
 
-`CharacterMorphDefinition` is the shared abstract definition type. `BipolarMorphDefinition` and `PositiveOnlyMorphDefinition` inherit its common identifier, label, group, and shape-name mapping, then provide their own valid range, binding requirements, and weight calculation. The controller works through the base type, so it does not need type-specific conditionals when applying a morph.
+Morph definitions now come from `CharacterMorphCatalogAsset` when assigned, with `CharacterMorphCatalog` preserved as a static fallback. This lets the demo keep its current rows and recipe IDs while moving toward authored, swappable character catalogs.
+
+`CharacterMorphDefinition` is the shared abstract definition type. `BipolarMorphDefinition` and `PositiveOnlyMorphDefinition` inherit its common identifier, label, group, and shape-name mapping, then provide their own valid range, binding requirements, and weight calculation. Each definition also declares a driver type. Blendshape definitions drive mesh weights; skeletal definitions route through `CharacterRigProportionDriver`.
+
+The rig path separates responsibility from surface morphs. Breast, glutes, face, belly, and similar detail controls remain blendshape-driven. Height, shoulder width, hips, and hidden BML-style proportion channels are skeletal. The hidden backend currently includes upper body, lower body, spine, chest, waist, head, neck, shoulders, arms, hands, fingers, legs, feet, and foot radius. These channels stay out of the creator UI but remain visible in the `CharacterRigProportionDriver` inspector for testing.
+
+`CharacterRigProportionDriver` captures bind pose, reapplies skeletal changes from that baseline, and exposes optional foot grounding through `CharacterRigAnimatorIkBridge`. The scale formulas and grounding strategy are adapted from BodyMorphLite by Serhat Dikel under the MIT license, but are integrated into CharacterEditor's catalog, recipe, and active-root architecture rather than copied as a drop-in component.
 
 Gameplay systems can drive the original muscle and body-fat vision through `SetStatGrowth(statId, normalizedValue)`. `StatGrowthDefinition` maps a normalized host-game stat to an existing stable morph ID and output range. Muscle maps `0..1` to `body.muscle` at `0..1`; body fat maps `0..1` to `body.weight` at `-1..1`, with `0.5` representing the neutral body.
 
@@ -19,7 +25,7 @@ controller.SetStatGrowth("muscle", normalizedStrength);
 controller.SetStatGrowth("body_fat", normalizedBodyFat);
 ```
 
-The menu is authored in `Prefabs/CharacterMorphMenu.prefab`. Eight morph tabs, Skin, and Presets share the left rail. The Skin tab offers eight authored tones and a collapsed HSV custom-colour panel. Skin is applied only to explicitly assigned body renderers through `MaterialPropertyBlock`, so shared materials and non-skin meshes are not modified.
+The menu is authored in `Prefabs/CharacterMorphMenuDemoUI.prefab`. Eight morph tabs, Skin, and Presets share the left rail. The Skin tab offers authored tones and a collapsed HSV custom-colour panel. Skin is applied only to explicitly assigned body renderers through `MaterialPropertyBlock`, so shared materials and non-skin meshes are not modified.
 
 Each morph row explicitly stores its logical identifier and UI references. Runtime code binds these existing controls without rebuilding the menu; a missing row is cloned from the prefab's inactive slider template, placed in catalogue order, and shown only when its group is selected.
 
@@ -57,7 +63,12 @@ finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
 - The default character sex is centralized in `CharacterCustomizationUiConfig`.
 - Male and female recipes remain independent during the current session.
 - Runtime code addresses morphs by stable identifiers rather than FBX blendshape names.
+- `CharacterMorphCatalogAsset` is the preferred authored source of morph definitions; the static catalog remains as a migration fallback.
 - Morph behaviour uses inheritance and polymorphism: the controller delegates range, shape, and weight rules to the concrete morph definition.
+- Driver type separates blendshape surface controls from skeletal proportion controls.
+- BML-style rig channels are hidden from the creator UI until deliberately promoted, but inspector controls remain available for testing.
+- Rig edits are reapplied from captured bind pose to avoid cumulative bone drift.
+- `CharacterRigAnimatorIkBridge` is the only `OnAnimatorIK` entry point, because the active Animator lives on the male/female body prefab rather than on the manager.
 - Stat growth uses composition rather than another morph subclass because one input system can drive different morph behaviours. The host game owns progression rules and sends normalized muscle or body-fat values.
 - The authored Canvas prefab is the source of truth for menu hierarchy and presentation.
 - Runtime UI creation is limited to cloning a missing morph row from the assigned template.
@@ -73,6 +84,7 @@ finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
 - Gameplay-camera and controller references are optional. When assigned, finalization performs a native smooth handoff; otherwise the saved demo remains interactive.
 - Reset All is contained in the Presets tab and clears every morph on the visible character. Each morph tab exposes a fixed Reset control that clears only that tab's group.
 - `Tools > Character Customization > Validate Morph Demo` checks the centralized tab list, skin palette and renderer bindings, profile/finalization wiring, character morphs, scene wiring, and UI input references without rebuilding assets.
+- `Tools > Sol > Character Customization > Validate Selected Character Setup` checks catalog validity, active roots, humanoid Animator, blendshape bindings, required rig bones, IK bridge, and Animator Controller IK Pass.
 - ScriptableObject presets are authoring assets rather than player save files. User-saved presets persist through `CharacterPresetSaveRepository`.
 - Editor setup tools are explicit menu actions. They no longer auto-run on editor reload, so designer prefab edits are not silently rewritten.
 - Game-specific progression, eye colour, hair, and clothing remain outside the current iteration.
@@ -80,9 +92,13 @@ finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
 ## Validation Checkpoint
 The earlier tabbed-menu iteration was validated in Unity 6000.3.9f1 on 24 June 2026. The finalization and runtime-preset iterations add Edit Mode coverage for recipe JSON, multiple-player persistence, runtime-preset persistence, duplicate overwrite handling, malformed files, and restrained randomization, plus validator and Play Mode checks for the authored profile, skin, footer, and camera wiring.
 
+The BodyMorphLite merge currently passes generated runtime/editor builds and has catalog/visibility edit-mode coverage. The remaining validation gap is visual Play Mode proof: height, leg, and foot edits should be tested on flat ground, small steps, male/female switching, and finalize handoff with grounding enabled.
+
 ## Next Steps
-1. Replace the hardcoded MPFB catalogue and male/female assumptions with serialized morph profiles and character-variant bindings while preserving stable logical identifiers.
-2. Separate reusable runtime and editor code from the MPFB demo, then add package metadata, assembly definitions, and a `Samples~` demo.
-3. Expand automated coverage for value clamping, bipolar weights, stat-growth mapping, recipe isolation, missing bindings, skin rendering, and the assigned gameplay-camera handoff.
-4. Document installation and public APIs, declare dependencies, audit MPFB redistribution rights, and add licence, version, and changelog files.
-5. Add appearance option providers for eye colour, hair, and clothing only when those selectors become active scope.
+1. Prove BML-style grounding in Play Mode across flat ground, small steps, male/female switching, and finalize handoff.
+2. Assign and validate catalog/profile assets in the demo prefab, then test setup on a brand-new humanoid root.
+3. Separate reusable runtime, UGUI, gameplay-demo, editor, and tests into assembly boundaries once the current demo is stable.
+4. Move demo-only FBX, materials, fonts, sprites, lighting, and scenes into a sample boundary during package extraction.
+5. Expand automated coverage for value clamping, bipolar weights, stat-growth mapping, recipe isolation, missing bindings, skeletal channels, skin rendering, and gameplay-camera handoff.
+6. Document installation and public APIs, declare dependencies, audit imported asset redistribution rights, and add licence, version, changelog, and third-party notice files.
+7. Add appearance option providers for hair and clothing only when those selectors become active scope.
