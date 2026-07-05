@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a4cf4d2e7bb4e64a971fb0ff2d9f131, type: 3}
+  m_Name: DefaultEyeMaterialPalette
+  m_EditorClassIdentifier: 
+  defaultEyeMaterialId: brown
+  options:
+  - id: brown
+    label: Brown
+    material: {fileID: 2100000, guid: 10019580ba20095418aa420b73389333, type: 2}
+  - id: blue
+    label: Blue
+    material: {fileID: 2100000, guid: 42303e98c58fe8a429e607a1dc19e772, type: 2}
+  - id: grey
+    label: Grey
+    material: {fileID: 2100000, guid: d92f6f4588fd554498ad8141a2c32661, type: 2}
+  - id: gecko_green
+    label: Gecko Green
+    material: {fileID: 2100000, guid: 9f605cbdc870db74088d589cc19dd9b6, type: 2}
+  - id: gecko_grey
+    label: Gecko Grey
+    material: {fileID: 2100000, guid: 6f3eb339cfc0c464c857839b002b2845, type: 2}
+  - id: gecko_red
+    label: Gecko Red
+    material: {fileID: 2100000, guid: d4bc2c263c3455c4fad85024907c69b2, type: 2}
+  - id: cat
+    label: Cat
+    material: {fileID: 2100000, guid: 94c918e886a12b842b8c54b9f077c3f7, type: 2}
+  - id: frog
+    label: Frog
+    material: {fileID: 2100000, guid: 872ee389516272e4dbeb24e11d05cc02, type: 2}
+  - id: alien_gold
+    label: Alien Gold
+    material: {fileID: 2100000, guid: 2a0edc50df97aa5419eda74b07b91fdc, type: 2}
+  - id: alien_metallic
+    label: Alien Metallic
+    material: {fileID: 2100000, guid: 6d94e64a22b780344856f7ba34240d01, type: 2}
+

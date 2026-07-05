@@ -44,7 +44,11 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Slider hueSlider;
         [SerializeField] private Slider saturationSlider;
         [SerializeField] private Slider valueSlider;
+        [SerializeField] private Slider roughnessSlider;
         [SerializeField] private Image customColorPreview;
+        [SerializeField] private GameObject eyeColorGrid;
+        [SerializeField] private CharacterEyeSwatchButton[] eyeSwatches = Array.Empty<CharacterEyeSwatchButton>();
+        [SerializeField] private GameObject bodyTypeHeading;
         [SerializeField] private CharacterMorphTabButton[] tabButtons = Array.Empty<CharacterMorphTabButton>();
         [SerializeField] private Color selectedTabColor = new(0.82f, 0.73f, 0.55f, 1f);
         [SerializeField] private Color inactiveTabColor = new(0.27f, 0.27f, 0.27f, 1f);
@@ -53,6 +57,7 @@ namespace Sol.CharacterCustomization
         private readonly Dictionary<CharacterMorphTabButton, UnityAction> tabListeners = new();
         private readonly Dictionary<CharacterSkinSwatchButton, UnityAction> skinListeners = new();
         private readonly Dictionary<CharacterSkinSwatchButton, UnityAction> skinDeleteListeners = new();
+        private readonly Dictionary<CharacterEyeSwatchButton, UnityAction> eyeListeners = new();
         private readonly Dictionary<CharacterSkinSwatchButton, RuntimeSkinColorRecord> savedSkinSwatches = new();
         private readonly List<CharacterSkinSwatchButton> runtimeSkinSwatches = new();
         private readonly List<PresetOption> availablePresets = new();
@@ -63,13 +68,29 @@ namespace Sol.CharacterCustomization
         private bool listenersRegistered;
         private bool refreshingSkin;
         private string selectedGroup = CharacterCustomizationUiConfig.DefaultMorphGroupId;
+        private Image hueGradientImage;
+        private Image saturationGradientImage;
+        private Image valueGradientImage;
+        private Texture2D hueGradientTexture;
+        private Texture2D saturationGradientTexture;
+        private Texture2D valueGradientTexture;
+        private Sprite hueGradientSprite;
+        private Sprite saturationGradientSprite;
+        private Sprite valueGradientSprite;
+        private float lastGradientHue = -1f;
+        private float lastGradientSaturation = -1f;
+        private float lastGradientValue = -1f;
 
         private static readonly Color AccentColor = new(0.82f, 0.73f, 0.55f, 1f);
         private static readonly Color InactiveColor = new(0.27f, 0.27f, 0.27f, 1f);
+        private const int ColorGradientTextureWidth = 128;
         private const string DeletePresetConfirmationKey = "delete_character_preset";
+        private const string BodyGroupId = "Body";
+        private const string EyeGroupId = "Eyes";
 
         public event Action<RuntimeCharacterPresetRecord> RuntimePresetSaved;
         public event Action<string, CharacterRecipe> PresetLoaded;
+        public event Action<string> RuntimePresetDeleted;
 
         public ICharacterPresetSaveRepository PresetRepository => presetRepository;
         public ICharacterSkinColorSaveRepository CustomSkinRepository => customSkinRepository;
@@ -100,6 +121,8 @@ namespace Sol.CharacterCustomization
             {
                 row.Unbind();
             }
+
+            DestroyColorGradientResources();
         }
 
         public CharacterMorphSliderRow CreateSliderForMorph(string morphId)
@@ -242,6 +265,7 @@ namespace Sol.CharacterCustomization
             }
 
             RefreshSkinPanel();
+            RefreshEyePanel();
         }
 
         public void RefreshSkinPanel()
@@ -264,8 +288,33 @@ namespace Sol.CharacterCustomization
             hueSlider.SetValueWithoutNotify(hue);
             saturationSlider.SetValueWithoutNotify(saturation);
             valueSlider.SetValueWithoutNotify(value);
+            UpdateCustomColorSliderGradients(hue, saturation, value);
+            if (roughnessSlider != null)
+            {
+                ConfigureRoughnessSlider();
+                roughnessSlider.SetValueWithoutNotify(profile.SkinRoughness);
+            }
+
             customColorPreview.color = color;
             refreshingSkin = false;
+        }
+
+        private void RefreshEyePanel()
+        {
+            if (profile == null)
+            {
+                return;
+            }
+
+            foreach (CharacterEyeSwatchButton swatch in EnumerateEyeSwatches())
+            {
+                swatch.transform.localScale = IsEyeSwatchSelected(swatch) ? Vector3.one * 1.08f : Vector3.one;
+                if (profile.EyePalette != null &&
+                    profile.EyePalette.TryGet(swatch.EyeMaterialId, out CharacterEyeMaterialOption option))
+                {
+                    swatch.SetDisplay(option);
+                }
+            }
         }
 
         private void Initialize()
@@ -287,6 +336,7 @@ namespace Sol.CharacterCustomization
             EnsurePresetRepository();
             EnsureCustomSkinRepository();
             skinSwatches = GetConfiguredAuthoredSkinSwatches();
+            eyeSwatches = GetConfiguredAuthoredEyeSwatches();
             CacheAuthoredRows();
 
             foreach (CharacterMorphDefinition definition in controller.Definitions)
@@ -340,8 +390,13 @@ namespace Sol.CharacterCustomization
             AddMissing(errors, hueSlider == null, "hueSlider");
             AddMissing(errors, saturationSlider == null, "saturationSlider");
             AddMissing(errors, valueSlider == null, "valueSlider");
+            AddMissing(warnings, roughnessSlider == null, "roughnessSlider");
             AddMissing(errors, customColorPreview == null, "customColorPreview");
             ValidateSkinSwatches(errors);
+            if (HasEyeGrid())
+            {
+                ValidateEyeSwatches(errors);
+            }
             ValidateTabs(errors);
 
             if (warnings.Count > 0)
@@ -380,10 +435,14 @@ namespace Sol.CharacterCustomization
             RepairNamedComponent(ref hueSlider, "hueSlider", "Hue Slider");
             RepairNamedComponent(ref saturationSlider, "saturationSlider", "Saturation Slider");
             RepairNamedComponent(ref valueSlider, "valueSlider", "Value Slider");
+            RepairNamedComponent(ref roughnessSlider, "roughnessSlider", "Roughness Slider");
             RepairNamedComponent(ref customColorPreview, "customColorPreview", "Custom Colour Preview", "Custom Color Preview");
             RepairNamedGameObject(ref presetPanel, "presetPanel", "Preset Panel");
             RepairNamedGameObject(ref skinPanel, "skinPanel", "Skin Panel");
+            RepairOptionalNamedGameObject(ref eyeColorGrid, "EyeColor Scrolll View", "EyeColor Scroll View", "Eye Color Grid");
+            RepairTextGameObject(ref bodyTypeHeading, "Body Type");
             RepairNamedGameObject(ref customColorPanel, "customColorPanel", "Advanced Custom Colour Panel", "Advanced Custom Color Panel");
+            RepairEyeSwatches();
 
             if (content == null && mainSliderScrollRect != null && mainSliderScrollRect.content != null)
             {
@@ -413,6 +472,20 @@ namespace Sol.CharacterCustomization
             }
         }
 
+        private void RepairEyeSwatches()
+        {
+            if (eyeSwatches != null && eyeSwatches.Length > 0 || eyeColorGrid == null)
+            {
+                return;
+            }
+
+            CharacterEyeSwatchButton[] found = eyeColorGrid.GetComponentsInChildren<CharacterEyeSwatchButton>(true);
+            if (found.Length > 0)
+            {
+                eyeSwatches = found;
+            }
+        }
+
         private void RepairNamedComponent<T>(ref T reference, string label, params string[] objectNames)
             where T : Component
         {
@@ -439,6 +512,49 @@ namespace Sol.CharacterCustomization
             {
                 reference = found.gameObject;
                 Debug.LogWarning($"Repaired missing {label} reference from authored object '{found.gameObject.name}'.", this);
+            }
+        }
+
+        private void RepairOptionalNamedGameObject(ref GameObject reference, params string[] objectNames)
+        {
+            if (reference != null)
+            {
+                return;
+            }
+
+            if (TryFindUniqueNamedComponent(objectNames, out RectTransform found))
+            {
+                reference = found.gameObject;
+            }
+        }
+
+        private void RepairTextGameObject(ref GameObject reference, string text)
+        {
+            if (reference != null)
+            {
+                return;
+            }
+
+            TMP_Text[] candidates = GetComponentsInChildren<TMP_Text>(true);
+            TMP_Text match = null;
+            foreach (TMP_Text candidate in candidates)
+            {
+                if (candidate == null || !string.Equals(candidate.text, text, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (match != null)
+                {
+                    return;
+                }
+
+                match = candidate;
+            }
+
+            if (match != null)
+            {
+                reference = match.gameObject;
             }
         }
 
@@ -544,6 +660,61 @@ namespace Sol.CharacterCustomization
             }
         }
 
+        private void ValidateEyeSwatches(List<string> errors)
+        {
+            if (eyeSwatches == null || eyeSwatches.Length == 0)
+            {
+                errors.Add("eyeSwatches has no entries");
+                return;
+            }
+
+            if (eyeSwatches.Length != 10)
+            {
+                errors.Add($"eyeSwatches has {eyeSwatches.Length} entries but 10 are required");
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            int configuredCount = 0;
+            CharacterEyeMaterialPalette palette = profile != null ? profile.EyePalette : null;
+            for (int index = 0; index < eyeSwatches.Length; index++)
+            {
+                CharacterEyeSwatchButton swatch = eyeSwatches[index];
+                if (swatch == null)
+                {
+                    errors.Add($"eyeSwatches[{index}] is unassigned");
+                    continue;
+                }
+
+                if (!swatch.IsConfigured)
+                {
+                    errors.Add($"eyeSwatches[{index}] '{swatch.name}' is incomplete");
+                    continue;
+                }
+
+                configuredCount++;
+                if (!ids.Add(swatch.EyeMaterialId))
+                {
+                    errors.Add($"eyeSwatches contains duplicate eye material '{swatch.EyeMaterialId}'");
+                }
+
+                if (palette != null && !palette.TryGet(swatch.EyeMaterialId, out _))
+                {
+                    errors.Add($"eyeSwatches[{index}] '{swatch.name}' references unknown eye material '{swatch.EyeMaterialId}'");
+                }
+            }
+
+            if (configuredCount != 10)
+            {
+                errors.Add($"eyeSwatches has {configuredCount} configured entries but 10 are required");
+            }
+        }
+
+        private bool HasEyeGrid()
+        {
+            return eyeColorGrid != null ||
+                   eyeSwatches != null && eyeSwatches.Length > 0;
+        }
+
         private void ValidateTabs(List<string> errors)
         {
             IReadOnlyList<string> expectedTabs = CharacterCustomizationUiConfig.TabGroups;
@@ -603,6 +774,31 @@ namespace Sol.CharacterCustomization
             foreach (CharacterSkinSwatchButton swatch in skinSwatches)
             {
                 if (swatch != null && swatch.IsConfigured && !IsAddSkinSwatch(swatch))
+                {
+                    swatches.Add(swatch);
+                }
+            }
+
+            return swatches.ToArray();
+        }
+
+        private CharacterEyeSwatchButton[] GetConfiguredAuthoredEyeSwatches()
+        {
+            CharacterEyeSwatchButton[] authoredSwatches = eyeSwatches;
+            if ((authoredSwatches == null || authoredSwatches.Length == 0) && eyeColorGrid != null)
+            {
+                authoredSwatches = eyeColorGrid.GetComponentsInChildren<CharacterEyeSwatchButton>(true);
+            }
+
+            if (authoredSwatches == null)
+            {
+                return Array.Empty<CharacterEyeSwatchButton>();
+            }
+
+            var swatches = new List<CharacterEyeSwatchButton>(authoredSwatches.Length);
+            foreach (CharacterEyeSwatchButton swatch in authoredSwatches)
+            {
+                if (swatch != null && swatch.IsConfigured)
                 {
                     swatches.Add(swatch);
                 }
@@ -816,6 +1012,29 @@ namespace Sol.CharacterCustomization
                    string.Equals(swatch.SkinToneId, profile.SkinToneId, StringComparison.Ordinal);
         }
 
+        private IEnumerable<CharacterEyeSwatchButton> EnumerateEyeSwatches()
+        {
+            if (eyeSwatches == null)
+            {
+                yield break;
+            }
+
+            foreach (CharacterEyeSwatchButton swatch in eyeSwatches)
+            {
+                if (swatch != null && swatch.IsConfigured)
+                {
+                    yield return swatch;
+                }
+            }
+        }
+
+        private bool IsEyeSwatchSelected(CharacterEyeSwatchButton swatch)
+        {
+            return swatch != null &&
+                   profile != null &&
+                   string.Equals(swatch.EyeMaterialId, profile.EyeMaterialId, StringComparison.Ordinal);
+        }
+
         private bool IsAddSkinSwatch(CharacterSkinSwatchButton swatch)
         {
             return swatch != null && addSkinButton != null && swatch.Button == addSkinButton;
@@ -894,9 +1113,33 @@ namespace Sol.CharacterCustomization
 
         private void ResetSelectedGroup()
         {
+            if (CharacterCustomizationUiConfig.IsSkinGroup(selectedGroup))
+            {
+                ResetSkin();
+                return;
+            }
+
             if (controller.ResetGroup(selectedGroup))
             {
                 RefreshPanel();
+            }
+        }
+
+        private void ResetSkin()
+        {
+            CharacterSkinTone defaultTone = profile != null && profile.SkinPalette != null
+                ? profile.SkinPalette.GetDefault()
+                : null;
+
+            if (defaultTone == null)
+            {
+                Debug.LogWarning("Cannot reset skin without a default skin tone.", this);
+                return;
+            }
+
+            if (profile.SetSkinTone(defaultTone.Id))
+            {
+                RefreshSkinPanel();
             }
         }
 
@@ -999,6 +1242,7 @@ namespace Sol.CharacterCustomization
 
             ClearPresetOverwriteConfirmation();
             RefreshPresetOptions();
+            RuntimePresetDeleted?.Invoke(deletedPresetName);
         }
 
         private void RefreshPresetOptions(string selectedRuntimePresetId = null)
@@ -1067,13 +1311,34 @@ namespace Sol.CharacterCustomization
             bool showingPresets = CharacterCustomizationUiConfig.IsPresetGroup(selectedGroup);
             bool showingSkin = CharacterCustomizationUiConfig.IsSkinGroup(selectedGroup);
             bool showingMorphs = !showingPresets && !showingSkin;
+            bool showingBody = string.Equals(selectedGroup, BodyGroupId, StringComparison.Ordinal);
+            bool showingEyes = string.Equals(selectedGroup, EyeGroupId, StringComparison.Ordinal);
             presetPanel.SetActive(showingPresets);
             skinPanel.SetActive(showingSkin);
+            if (eyeColorGrid != null)
+            {
+                eyeColorGrid.SetActive(showingEyes);
+            }
+
+            if (bodyTypeHeading != null)
+            {
+                bodyTypeHeading.SetActive(showingBody);
+            }
+
             mainSliderScrollRect.gameObject.SetActive(showingMorphs);
-            resetGroupButton.gameObject.SetActive(showingMorphs);
+            resetGroupButton.gameObject.SetActive(true);
+            resetGroupButton.interactable = !showingPresets;
             if (showingMorphs)
             {
                 resetGroupButtonLabel.text = $"Reset {selectedGroup}";
+            }
+            else if (showingSkin)
+            {
+                resetGroupButtonLabel.text = "Reset Skin";
+            }
+            else
+            {
+                resetGroupButtonLabel.text = "Reset Tab";
             }
 
             foreach (KeyValuePair<string, CharacterMorphSliderRow> pair in rows)
@@ -1099,7 +1364,14 @@ namespace Sol.CharacterCustomization
             if (resetScroll && showingMorphs)
             {
                 Canvas.ForceUpdateCanvases();
+                if (showingEyes)
+                {
+                    RefreshEyePanel();
+                }
+
                 LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(mainSliderScrollRect.viewport);
+                LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)mainSliderScrollRect.transform);
                 mainSliderScrollRect.StopMovement();
                 mainSliderScrollRect.verticalNormalizedPosition = 1f;
             }
@@ -1150,10 +1422,16 @@ namespace Sol.CharacterCustomization
             hueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
             saturationSlider?.onValueChanged.AddListener(OnCustomColorChanged);
             valueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+            roughnessSlider?.onValueChanged.AddListener(OnRoughnessChanged);
 
             foreach (CharacterSkinSwatchButton swatch in EnumerateSkinSwatches())
             {
                 RegisterSkinSwatchListener(swatch);
+            }
+
+            foreach (CharacterEyeSwatchButton swatch in EnumerateEyeSwatches())
+            {
+                RegisterEyeSwatchListener(swatch);
             }
 
             foreach (CharacterMorphTabButton tab in tabButtons)
@@ -1194,6 +1472,19 @@ namespace Sol.CharacterCustomization
             }
         }
 
+        private void RegisterEyeSwatchListener(CharacterEyeSwatchButton swatch)
+        {
+            if (swatch == null || !swatch.IsConfigured || swatch.Button == null || eyeListeners.ContainsKey(swatch))
+            {
+                return;
+            }
+
+            CharacterEyeSwatchButton capturedSwatch = swatch;
+            UnityAction listener = () => SelectEyeSwatch(capturedSwatch);
+            capturedSwatch.Button.onClick.AddListener(listener);
+            eyeListeners.Add(capturedSwatch, listener);
+        }
+
         private void UnregisterListeners()
         {
             if (!listenersRegistered)
@@ -1215,6 +1506,7 @@ namespace Sol.CharacterCustomization
             hueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
             saturationSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
             valueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+            roughnessSlider?.onValueChanged.RemoveListener(OnRoughnessChanged);
 
             foreach (KeyValuePair<CharacterSkinSwatchButton, UnityAction> pair in skinListeners)
             {
@@ -1235,6 +1527,16 @@ namespace Sol.CharacterCustomization
             }
 
             skinDeleteListeners.Clear();
+
+            foreach (KeyValuePair<CharacterEyeSwatchButton, UnityAction> pair in eyeListeners)
+            {
+                if (pair.Key != null && pair.Key.Button != null)
+                {
+                    pair.Key.Button.onClick.RemoveListener(pair.Value);
+                }
+            }
+
+            eyeListeners.Clear();
 
             foreach (KeyValuePair<CharacterMorphTabButton, UnityAction> pair in tabListeners)
             {
@@ -1346,6 +1648,19 @@ namespace Sol.CharacterCustomization
             SelectSkinTone(swatch.SkinToneId);
         }
 
+        private void SelectEyeSwatch(CharacterEyeSwatchButton swatch)
+        {
+            if (swatch == null || profile == null)
+            {
+                return;
+            }
+
+            if (profile.SetEyeMaterial(swatch.EyeMaterialId))
+            {
+                RefreshEyePanel();
+            }
+        }
+
         private void SaveCurrentSkinColor()
         {
             EnsureCustomSkinRepository();
@@ -1436,6 +1751,174 @@ namespace Sol.CharacterCustomization
             profile.SetCustomSkinColor(color);
             customColorPreview.color = color;
             RefreshSkinPanel();
+        }
+
+        private void OnRoughnessChanged(float value)
+        {
+            if (refreshingSkin || profile == null)
+            {
+                return;
+            }
+
+            ConfigureRoughnessSlider();
+            profile.SetSkinRoughness(value);
+            RefreshSkinPanel();
+        }
+
+        private void ConfigureRoughnessSlider()
+        {
+            if (roughnessSlider == null)
+            {
+                return;
+            }
+
+            roughnessSlider.minValue = 0f;
+            roughnessSlider.maxValue = 1f;
+            roughnessSlider.wholeNumbers = false;
+        }
+
+        private void UpdateCustomColorSliderGradients(float hue, float saturation, float value)
+        {
+            EnsureCustomColorGradientTargets();
+            if (hueGradientImage == null || saturationGradientImage == null || valueGradientImage == null)
+            {
+                return;
+            }
+
+            EnsureCustomColorGradientResources();
+            AssignGradientSprite(hueGradientImage, hueGradientSprite);
+            AssignGradientSprite(saturationGradientImage, saturationGradientSprite);
+            AssignGradientSprite(valueGradientImage, valueGradientSprite);
+
+            if (lastGradientHue < 0f)
+            {
+                FillHorizontalGradient(hueGradientTexture, t => Color.HSVToRGB(t, 1f, 1f));
+            }
+
+            if (!Mathf.Approximately(lastGradientHue, hue) ||
+                !Mathf.Approximately(lastGradientValue, value))
+            {
+                FillHorizontalGradient(saturationGradientTexture, t => Color.HSVToRGB(hue, t, value));
+            }
+
+            if (!Mathf.Approximately(lastGradientHue, hue) ||
+                !Mathf.Approximately(lastGradientSaturation, saturation))
+            {
+                FillHorizontalGradient(valueGradientTexture, t => Color.HSVToRGB(hue, saturation, t));
+            }
+
+            lastGradientHue = hue;
+            lastGradientSaturation = saturation;
+            lastGradientValue = value;
+        }
+
+        private void EnsureCustomColorGradientTargets()
+        {
+            hueGradientImage ??= FindSliderBackgroundImage(hueSlider);
+            saturationGradientImage ??= FindSliderBackgroundImage(saturationSlider);
+            valueGradientImage ??= FindSliderBackgroundImage(valueSlider);
+
+            DisableSliderFillImage(hueSlider);
+            DisableSliderFillImage(saturationSlider);
+            DisableSliderFillImage(valueSlider);
+        }
+
+        private static Image FindSliderBackgroundImage(Slider slider)
+        {
+            if (slider == null)
+            {
+                return null;
+            }
+
+            Transform background = slider.transform.Find("Background");
+            return background != null ? background.GetComponent<Image>() : null;
+        }
+
+        private static void DisableSliderFillImage(Slider slider)
+        {
+            if (slider == null || slider.fillRect == null)
+            {
+                return;
+            }
+
+            Image fillImage = slider.fillRect.GetComponent<Image>();
+            if (fillImage != null)
+            {
+                fillImage.enabled = false;
+            }
+        }
+
+        private void EnsureCustomColorGradientResources()
+        {
+            hueGradientTexture ??= CreateGradientTexture("Hue Gradient");
+            saturationGradientTexture ??= CreateGradientTexture("Saturation Gradient");
+            valueGradientTexture ??= CreateGradientTexture("Value Gradient");
+            hueGradientSprite ??= CreateGradientSprite(hueGradientTexture);
+            saturationGradientSprite ??= CreateGradientSprite(saturationGradientTexture);
+            valueGradientSprite ??= CreateGradientSprite(valueGradientTexture);
+        }
+
+        private static Texture2D CreateGradientTexture(string textureName)
+        {
+            return new Texture2D(ColorGradientTextureWidth, 1, TextureFormat.RGBA32, false)
+            {
+                name = textureName,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+                hideFlags = HideFlags.DontSave
+            };
+        }
+
+        private static Sprite CreateGradientSprite(Texture2D texture)
+        {
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                1f);
+            sprite.hideFlags = HideFlags.DontSave;
+            return sprite;
+        }
+
+        private static void AssignGradientSprite(Image image, Sprite sprite)
+        {
+            if (image.sprite != sprite)
+            {
+                image.sprite = sprite;
+            }
+
+            image.type = Image.Type.Simple;
+            image.color = Color.white;
+            image.raycastTarget = false;
+        }
+
+        private static void FillHorizontalGradient(Texture2D texture, Func<float, Color> sample)
+        {
+            for (int x = 0; x < texture.width; x++)
+            {
+                float t = texture.width <= 1 ? 0f : x / (float)(texture.width - 1);
+                texture.SetPixel(x, 0, sample(t));
+            }
+
+            texture.Apply(false, false);
+        }
+
+        private void DestroyColorGradientResources()
+        {
+            DestroyGeneratedObject(hueGradientSprite);
+            DestroyGeneratedObject(saturationGradientSprite);
+            DestroyGeneratedObject(valueGradientSprite);
+            DestroyGeneratedObject(hueGradientTexture);
+            DestroyGeneratedObject(saturationGradientTexture);
+            DestroyGeneratedObject(valueGradientTexture);
+        }
+
+        private static void DestroyGeneratedObject(UnityEngine.Object target)
+        {
+            if (target != null)
+            {
+                Destroy(target);
+            }
         }
 
         private static int GetCatalogOrder(string morphId)

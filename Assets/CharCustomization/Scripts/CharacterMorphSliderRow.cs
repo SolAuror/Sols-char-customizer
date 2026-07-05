@@ -1,3 +1,4 @@
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -55,7 +56,7 @@ namespace Sol.CharacterCustomization
 
             float value = controller.GetMorph(morphId);
             slider.SetValueWithoutNotify(value);
-            valueText.text = value.ToString("0.00");
+            valueText.text = FormatValue(value);
             slider.interactable = true;
         }
 
@@ -78,7 +79,18 @@ namespace Sol.CharacterCustomization
         private void OnValueChanged(float value)
         {
             controller.SetMorph(morphId, value);
-            valueText.text = value.ToString("0.00");
+            valueText.text = FormatValue(value);
+        }
+
+        private static string FormatValue(float value)
+        {
+            if (Mathf.Approximately(value, 0f))
+            {
+                value = 0f;
+            }
+
+            string magnitude = Mathf.Abs(value).ToString("0.00", CultureInfo.InvariantCulture);
+            return value < 0f ? $"-{magnitude}" : magnitude;
         }
     }
 }

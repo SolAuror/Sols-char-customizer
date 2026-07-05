@@ -40,6 +40,7 @@ namespace Sol.CharacterCustomization
         private float panOffset;
         private bool initialized;
         private bool isBlending;
+        private bool customizationInputEnabled = true;
         private readonly List<RaycastResult> interfaceHits = new();
 
         public Camera PreviewCamera => previewCamera;
@@ -79,7 +80,7 @@ namespace Sol.CharacterCustomization
         private void Update()
         {
             Mouse mouse = Mouse.current;
-            if (!initialized || isBlending || mouse == null ||
+            if (!initialized || !customizationInputEnabled || isBlending || mouse == null ||
                 IsPointerOverInterface(mouse.position.ReadValue()))
             {
                 return;
@@ -154,6 +155,11 @@ namespace Sol.CharacterCustomization
             zoomOffset = 0f;
             panOffset = 0f;
             smoothVelocity = Vector3.zero;
+        }
+
+        public void SetCustomizationInputEnabled(bool enabled)
+        {
+            customizationInputEnabled = enabled;
         }
 
         public void SnapToFocus()

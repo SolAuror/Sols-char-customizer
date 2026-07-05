@@ -95,24 +95,28 @@ namespace Sol.CharacterCustomization
         {
             if (characterNameInput == null)
             {
+                SetStatus("The character name input is not assigned.", true);
                 Debug.LogWarning("The character name input is not assigned.", this);
                 return;
             }
 
             if (nameList == null)
             {
+                SetStatus("No character name list is assigned.", true);
                 Debug.LogWarning("No character name list is assigned.", this);
                 return;
             }
 
             if (!nameList.TryGetRandomName(out string randomName))
             {
+                SetStatus("The assigned character name list has no usable names.", true);
                 Debug.LogWarning("The assigned character name list has no usable names.", nameList);
                 return;
             }
 
             characterNameInput.text = randomName;
             ClearOverwriteConfirmation();
+            SetStatus($"Name randomized to '{randomName}'.", false);
         }
 
         public void SetPlayerSaveRepository(ICharacterPlayerSaveRepository saveRepository)
@@ -185,11 +189,7 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            SetCustomizationInteractable(false);
-            if (customizationInterface != null)
-            {
-                customizationInterface.SetActive(false);
-            }
+            BeginGameplayHandoff();
 
             SetStatus($"Saved {record.PlayerName}.", false);
         }
@@ -207,6 +207,17 @@ namespace Sol.CharacterCustomization
             }
 
             previewControls.enabled = false;
+        }
+
+        private void BeginGameplayHandoff()
+        {
+            previewControls.SetCustomizationInputEnabled(false);
+            SetCustomizationInteractable(false);
+            UnregisterListeners();
+            if (customizationInterface != null)
+            {
+                customizationInterface.SetActive(false);
+            }
         }
 
         private bool HasCompleteHandoff(out string error)
@@ -323,6 +334,13 @@ namespace Sol.CharacterCustomization
                 finalizeButton.onClick.AddListener(FinalizeCharacter);
             }
 
+            if (demoUI != null)
+            {
+                demoUI.RuntimePresetSaved += OnRuntimePresetSaved;
+                demoUI.PresetLoaded += OnPresetLoaded;
+                demoUI.RuntimePresetDeleted += OnRuntimePresetDeleted;
+            }
+
             listenersRegistered = true;
         }
 
@@ -353,7 +371,30 @@ namespace Sol.CharacterCustomization
                 finalizeButton.onClick.RemoveListener(FinalizeCharacter);
             }
 
+            if (demoUI != null)
+            {
+                demoUI.RuntimePresetSaved -= OnRuntimePresetSaved;
+                demoUI.PresetLoaded -= OnPresetLoaded;
+                demoUI.RuntimePresetDeleted -= OnRuntimePresetDeleted;
+            }
+
             listenersRegistered = false;
+        }
+
+        private void OnRuntimePresetSaved(RuntimeCharacterPresetRecord record)
+        {
+            string presetName = record != null ? record.PresetName : "Preset";
+            SetStatus($"Preset '{presetName}' saved.", false);
+        }
+
+        private void OnPresetLoaded(string presetName, CharacterRecipe _)
+        {
+            SetStatus($"Preset '{presetName}' loaded.", false);
+        }
+
+        private void OnRuntimePresetDeleted(string presetName)
+        {
+            SetStatus($"Preset '{presetName}' deleted.", false);
         }
 
         private void OnCharacterNameChanged(string _)

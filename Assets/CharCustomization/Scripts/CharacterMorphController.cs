@@ -15,6 +15,8 @@ namespace Sol.CharacterCustomization
         private bool initialized;
 
         public CharacterSex ActiveSex => activeSex;
+        public GameObject FemaleRoot => femaleRoot;
+        public GameObject MaleRoot => maleRoot;
         public Transform ActiveCharacterRoot => activeSex == CharacterSex.Female
             ? femaleRoot != null ? femaleRoot.transform : null
             : maleRoot != null ? maleRoot.transform : null;

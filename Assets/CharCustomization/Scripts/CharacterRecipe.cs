@@ -23,14 +23,16 @@ namespace Sol.CharacterCustomization
     [Serializable]
     public sealed class CharacterRecipe
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
         public const string DefaultSkinToneId = "fair";
+        public const string DefaultEyeMaterialId = "brown";
 
         [SerializeField] private int version = CurrentVersion;
         [SerializeField] private CharacterSex sex = CharacterSex.Female;
         [SerializeField] private string skinToneId = DefaultSkinToneId;
         [SerializeField] private bool usesCustomSkinColor;
         [SerializeField] private Color customSkinColor = Color.white;
+        [SerializeField] private string eyeMaterialId = DefaultEyeMaterialId;
         [SerializeField] private List<CharacterMorphValue> morphValues = new();
 
         public int Version => version;
@@ -38,6 +40,9 @@ namespace Sol.CharacterCustomization
         public string SkinToneId => skinToneId;
         public bool UsesCustomSkinColor => usesCustomSkinColor;
         public Color CustomSkinColor => customSkinColor;
+        public string EyeMaterialId => string.IsNullOrWhiteSpace(eyeMaterialId)
+            ? DefaultEyeMaterialId
+            : eyeMaterialId;
         public IReadOnlyList<CharacterMorphValue> MorphValues =>
             morphValues ?? (IReadOnlyList<CharacterMorphValue>)Array.Empty<CharacterMorphValue>();
 
@@ -51,8 +56,19 @@ namespace Sol.CharacterCustomization
             bool usesCustomSkinColor,
             Color customSkinColor,
             IReadOnlyList<CharacterMorphValue> morphValues)
+            : this(sex, skinToneId, usesCustomSkinColor, customSkinColor, DefaultEyeMaterialId, morphValues)
         {
-            Overwrite(sex, skinToneId, usesCustomSkinColor, customSkinColor, morphValues);
+        }
+
+        public CharacterRecipe(
+            CharacterSex sex,
+            string skinToneId,
+            bool usesCustomSkinColor,
+            Color customSkinColor,
+            string eyeMaterialId,
+            IReadOnlyList<CharacterMorphValue> morphValues)
+        {
+            Overwrite(sex, skinToneId, usesCustomSkinColor, customSkinColor, eyeMaterialId, morphValues);
         }
 
         public CharacterRecipe Copy()
@@ -69,6 +85,23 @@ namespace Sol.CharacterCustomization
             Color recipeCustomSkinColor,
             IReadOnlyList<CharacterMorphValue> recipeMorphValues)
         {
+            Overwrite(
+                recipeSex,
+                recipeSkinToneId,
+                recipeUsesCustomSkinColor,
+                recipeCustomSkinColor,
+                DefaultEyeMaterialId,
+                recipeMorphValues);
+        }
+
+        internal void Overwrite(
+            CharacterSex recipeSex,
+            string recipeSkinToneId,
+            bool recipeUsesCustomSkinColor,
+            Color recipeCustomSkinColor,
+            string recipeEyeMaterialId,
+            IReadOnlyList<CharacterMorphValue> recipeMorphValues)
+        {
             version = CurrentVersion;
             sex = recipeSex;
             skinToneId = string.IsNullOrWhiteSpace(recipeSkinToneId)
@@ -76,6 +109,9 @@ namespace Sol.CharacterCustomization
                 : recipeSkinToneId.Trim();
             usesCustomSkinColor = recipeUsesCustomSkinColor;
             customSkinColor = recipeCustomSkinColor;
+            eyeMaterialId = string.IsNullOrWhiteSpace(recipeEyeMaterialId)
+                ? DefaultEyeMaterialId
+                : recipeEyeMaterialId.Trim();
             morphValues ??= new List<CharacterMorphValue>();
             morphValues.Clear();
 
@@ -99,6 +135,7 @@ namespace Sol.CharacterCustomization
                     DefaultSkinToneId,
                     false,
                     Color.white,
+                    DefaultEyeMaterialId,
                     Array.Empty<CharacterMorphValue>());
                 return;
             }
@@ -108,6 +145,7 @@ namespace Sol.CharacterCustomization
                 source.SkinToneId,
                 source.UsesCustomSkinColor,
                 source.CustomSkinColor,
+                source.EyeMaterialId,
                 source.MorphValues);
         }
 

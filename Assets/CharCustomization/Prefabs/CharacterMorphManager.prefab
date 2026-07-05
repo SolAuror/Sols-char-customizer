@@ -96,3 +96,6 @@ MonoBehaviour:
   - {fileID: 0}
   maleSkinRenderers:
   - {fileID: 0}
+  eyePalette: {fileID: 11400000, guid: c9ef91db28a14463a8db41c707e47824, type: 2}
+  femaleEyeRenderers: []
+  maleEyeRenderers: []

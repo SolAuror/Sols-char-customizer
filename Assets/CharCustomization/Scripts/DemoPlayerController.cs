@@ -22,9 +22,13 @@ namespace Sol.CharacterCustomization
 
         private float verticalVelocity;
         private bool gameplayInputEnabled;
+        private bool hasLockedMovementBasis;
+        private Vector3 lockedMovementForward;
+        private Vector3 lockedMovementRight;
 
         public InputActionReference MoveAction => moveAction;
         public Animator Animator => animator;
+        public bool GameplayInputEnabled => gameplayInputEnabled;
         public Vector2 CurrentInput { get; private set; }
         public Vector3 CurrentWorldMove { get; private set; }
         public bool IsMoving { get; private set; }
@@ -60,14 +64,10 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
+            LockFacingToMovementForward();
             CurrentInput = ReadMoveInput();
             CurrentWorldMove = BuildWorldMove(CurrentInput);
             IsMoving = CurrentWorldMove.sqrMagnitude > movementDeadZone * movementDeadZone;
-
-            if (IsMoving)
-            {
-                RotateTowards(CurrentWorldMove);
-            }
 
             Move(CurrentWorldMove);
             UpdateAnimator(IsMoving);
@@ -76,12 +76,19 @@ namespace Sol.CharacterCustomization
         public void SetGameplayInputEnabled(bool enabled)
         {
             gameplayInputEnabled = enabled;
+            if (enabled)
+            {
+                CaptureMovementBasis();
+                LockFacingToMovementForward();
+            }
+
             if (!enabled)
             {
                 CurrentInput = Vector2.zero;
                 CurrentWorldMove = Vector3.zero;
                 IsMoving = false;
                 verticalVelocity = 0f;
+                hasLockedMovementBasis = false;
                 UpdateAnimator(false);
             }
 
@@ -125,15 +132,70 @@ namespace Sol.CharacterCustomization
                 return Vector3.zero;
             }
 
-            Vector3 forward = cameraTransform != null ? cameraTransform.forward : transform.forward;
-            Vector3 right = cameraTransform != null ? cameraTransform.right : transform.right;
-            forward.y = 0f;
-            right.y = 0f;
-            forward.Normalize();
-            right.Normalize();
+            GetMovementBasis(out Vector3 forward, out Vector3 right);
 
             Vector3 move = forward * input.y + right * input.x;
             return move.sqrMagnitude > 1f ? move.normalized : move;
+        }
+
+        private void CaptureMovementBasis()
+        {
+            if (!TryGetPlanarDirection(cameraTransform != null ? cameraTransform.forward : Vector3.zero, out lockedMovementForward) &&
+                !TryGetPlanarDirection(animator != null ? animator.transform.forward : Vector3.zero, out lockedMovementForward) &&
+                !TryGetPlanarDirection(transform.forward, out lockedMovementForward))
+            {
+                lockedMovementForward = Vector3.forward;
+            }
+
+            if (!TryGetPlanarDirection(cameraTransform != null ? cameraTransform.right : Vector3.zero, out lockedMovementRight) &&
+                !TryGetPlanarDirection(animator != null ? animator.transform.right : Vector3.zero, out lockedMovementRight))
+            {
+                lockedMovementRight = Vector3.Cross(Vector3.up, lockedMovementForward);
+            }
+
+            hasLockedMovementBasis = true;
+        }
+
+        private void GetMovementBasis(out Vector3 forward, out Vector3 right)
+        {
+            if (!hasLockedMovementBasis)
+            {
+                CaptureMovementBasis();
+            }
+
+            forward = lockedMovementForward;
+            right = lockedMovementRight;
+        }
+
+        private void LockFacingToMovementForward()
+        {
+            if (!hasLockedMovementBasis)
+            {
+                CaptureMovementBasis();
+            }
+
+            Quaternion targetBodyRotation = Quaternion.LookRotation(lockedMovementForward, Vector3.up);
+            if (animator != null && animator.transform != transform && animator.transform.IsChildOf(transform))
+            {
+                Quaternion bodyRotationRelativeToPlayer = Quaternion.Inverse(transform.rotation) * animator.transform.rotation;
+                transform.rotation = targetBodyRotation * Quaternion.Inverse(bodyRotationRelativeToPlayer);
+                return;
+            }
+
+            transform.rotation = targetBodyRotation;
+        }
+
+        private static bool TryGetPlanarDirection(Vector3 direction, out Vector3 planarDirection)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                planarDirection = Vector3.zero;
+                return false;
+            }
+
+            planarDirection = direction.normalized;
+            return true;
         }
 
         private void RotateTowards(Vector3 moveDirection)

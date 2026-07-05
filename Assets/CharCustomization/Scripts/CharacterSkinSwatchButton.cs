@@ -11,6 +11,7 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Button deleteButton;
         [SerializeField] private Image swatchImage;
         [SerializeField] private TMP_Text label;
+        [SerializeField] private TMP_Text placeholderLabel;
 
         public string SkinToneId => skinToneId;
         public Button Button => button;
@@ -73,6 +74,31 @@ namespace Sol.CharacterCustomization
             {
                 label.text = displayLabel;
             }
+
+            HidePlaceholderLabel();
+        }
+
+        private void HidePlaceholderLabel()
+        {
+            placeholderLabel ??= FindPlaceholderLabel();
+            if (placeholderLabel != null)
+            {
+                placeholderLabel.gameObject.SetActive(false);
+            }
+        }
+
+        private TMP_Text FindPlaceholderLabel()
+        {
+            TMP_Text[] labels = GetComponentsInChildren<TMP_Text>(true);
+            foreach (TMP_Text candidate in labels)
+            {
+                if (candidate != label && string.Equals(candidate.text, "+", System.StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
 #if UNITY_EDITOR
@@ -87,6 +113,7 @@ namespace Sol.CharacterCustomization
             button = targetButton;
             swatchImage = targetImage;
             label = targetLabel;
+            placeholderLabel = null;
             if (tone != null)
             {
                 SetDisplay(tone.Label, tone.Color);
