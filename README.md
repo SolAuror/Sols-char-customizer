@@ -27,7 +27,7 @@ The public system talks in stable IDs such as `body.weight`, `body.muscle`, and 
 - Bipolar morphs for negative/positive shape pairs.
 - Positive-only morphs for one-way controls such as muscle.
 - Separated blendshape and skeletal-proportion driver paths.
-- Hidden BodyMorphLite-style rig backend channels for testing broader proportions.
+- Body tab consolidation for BodyMorphLite-style local-bone proportion sliders.
 - Optional foot grounding and Animator IK bridge for proportion-aware animation.
 - Skin swatches and custom skin colour support.
 - Authored Unity UI prefab with tabbed morph groups.
@@ -92,6 +92,8 @@ The demo currently uses MPFB-generated character assets. MPFB-specific names are
 | `CharacterFinalizationFlow` | Saves named player records and optionally hands off to gameplay camera control. |
 | `CharacterPresetSaveRepository` | Saves runtime presets to JSON. |
 | `CharacterPlayerSaveRepository` | Saves finalized player records to JSON. |
+| `CharacterSkinColorSaveRepository` | Saves custom skin colours to JSON. |
+| `CharacterEyeMaterialPalette` | Defines authored eye material choices used by recipes and UI swatches. |
 
 ## Runtime Saves
 
@@ -105,13 +107,16 @@ Default files:
 
 - `presets.json` stores user-created appearance presets.
 - `players.json` stores finalized named player records.
+- `skin-colors.json` stores saved custom skin colours.
 
-Host games can keep the default JSON save files, subscribe to events, or replace the repositories entirely.
+Recipes store sex, morph values, skin tone or custom skin colour, and eye material ID. Host games can keep the default JSON save files, subscribe to events, or replace the repositories entirely.
 
 ```csharp
 menu.SetPresetRepository(customPresetRepository);
+menu.SetCustomSkinRepository(customSkinRepository);
 menu.RuntimePresetSaved += preset => AppendToGameSave(preset.Recipe);
 menu.PresetLoaded += (name, recipe) => TrackPresetUse(name);
+menu.RuntimePresetDeleted += presetName => RemoveFromGameSave(presetName);
 
 finalization.SetPlayerSaveRepository(customPlayerRepository);
 finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
@@ -145,6 +150,7 @@ dotnet build Assembly-CSharp-Editor.csproj -nologo
 ## Documentation
 
 - [`Documentation/CharacterCustomization.md`](Documentation/CharacterCustomization.md) records current design decisions, validation notes, and next steps.
+- [`Documentation/API.md`](Documentation/API.md) is the methods and API guide for host-game integration.
 - [`Documentation/SystemPresentationArchitecture.md`](Documentation/SystemPresentationArchitecture.md) contains the architecture notes and pseudocode used for the system presentation.
 - [`Documentation/ThirdPartyNotices.md`](Documentation/ThirdPartyNotices.md) records BodyMorphLite attribution and MIT notice requirements for adapted rig/IK behavior.
 
@@ -154,12 +160,13 @@ Included in this iteration:
 
 - Character morph sliders and tabbed categories.
 - Catalog asset foundation with static fallback definitions.
-- Skeletal proportion backend for height, shoulders, hips, and hidden BML-style rig channels.
-- Inspector-only BML backend controls for testing.
+- Skeletal proportion backend for height, shoulders, hips, and BML-style rig sliders.
+- Inspector BML test controls remain available for direct driver testing.
 - Stable recipe capture and application.
 - Authored and runtime presets.
 - Runtime JSON saving for presets and finalized players.
 - Skin tone and custom colour support.
+- Eye material swatches with recipe persistence.
 - Optional native camera handoff.
 - Host-game API hooks for save integration.
 
@@ -170,7 +177,7 @@ Not included yet:
 - Verified plug-and-play setup on a brand-new humanoid character.
 - Full Play Mode IK parity tests for flat ground, steps, sex switching, and finalize handoff.
 - Hair, clothing, or equipment selectors.
-- Full installation, licence, version, and changelog files for distribution.
+- Full installation, licence, version, changelog, and package metadata files for distribution.
 
 ## Status
 

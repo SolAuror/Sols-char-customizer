@@ -16,7 +16,24 @@ namespace Sol.CharacterCustomization.EditorTests
                 .ToArray();
 
             CollectionAssert.AreEquivalent(
-                new[] { "body.height", "body.hips", "body.shoulder_width" },
+                new[]
+                {
+                    "body.height",
+                    "body.hips",
+                    "body.shoulder_width",
+                    "rig.chest",
+                    "rig.feet",
+                    "rig.fingers",
+                    "rig.hands",
+                    "rig.head",
+                    "rig.legs",
+                    "rig.lower_arms",
+                    "rig.lower_body",
+                    "rig.neck",
+                    "rig.spine",
+                    "rig.upper_arms",
+                    "rig.upper_body"
+                },
                 skeletalIds);
         }
 
@@ -25,9 +42,22 @@ namespace Sol.CharacterCustomization.EditorTests
         {
             AssertBlendShapeOnly("body.breast");
             AssertBlendShapeOnly("body.glutes");
+            AssertBlendShapeOnly("body.waist");
             AssertBlendShapeOnly("head.nose.width");
             AssertBlendShapeOnly("head.mouth.fullness");
             AssertBlendShapeOnly("head.eyes.size");
+        }
+
+        [Test]
+        public void BodyWidthControlsUseBmlRigChannels()
+        {
+            Assert.That(CharacterMorphCatalog.TryGet("body.shoulder_width", out CharacterMorphDefinition shoulderWidth), Is.True);
+            Assert.That(shoulderWidth.IsSkeletalDriven, Is.True);
+            Assert.That(shoulderWidth.RigChannel, Is.EqualTo(CharacterRigProportionChannel.Shoulders));
+
+            Assert.That(CharacterMorphCatalog.TryGet("body.hips", out CharacterMorphDefinition hips), Is.True);
+            Assert.That(hips.IsSkeletalDriven, Is.True);
+            Assert.That(hips.RigChannel, Is.EqualTo(CharacterRigProportionChannel.HipsWidth));
         }
 
         [Test]
@@ -60,18 +90,50 @@ namespace Sol.CharacterCustomization.EditorTests
         }
 
         [Test]
-        public void HiddenBodyMorphLiteBackendControlsAreAvailableButNotCreatorVisible()
+        public void BodyMorphLiteRigControlsAreCreatorVisibleInBodyGroup()
         {
-            string[] backendIds = CharacterMorphCatalog.Definitions
-                .Where(definition => definition.IsSkeletalDriven && !definition.VisibleInCreator)
+            CharacterMorphDefinition[] bodyDefinitions = CharacterMorphCatalog.Definitions
+                .Where(definition => definition.IsSkeletalDriven &&
+                                     definition.Group == CharacterMorphCatalog.BodyGroup &&
+                                     definition.VisibleInCreator)
+                .ToArray();
+
+            string[] bodyRigIds = bodyDefinitions
                 .Select(definition => definition.Id)
                 .OrderBy(id => id)
                 .ToArray();
 
-            CollectionAssert.Contains(backendIds, "rig.upper_body");
-            CollectionAssert.Contains(backendIds, "rig.legs");
-            CollectionAssert.Contains(backendIds, "rig.feet");
-            CollectionAssert.Contains(backendIds, "rig.foot_radius");
+            CollectionAssert.Contains(bodyRigIds, "rig.upper_body");
+            CollectionAssert.Contains(bodyRigIds, "rig.legs");
+            CollectionAssert.Contains(bodyRigIds, "rig.feet");
+            CollectionAssert.Contains(bodyRigIds, "rig.spine");
+            CollectionAssert.DoesNotContain(bodyRigIds, "rig.waist");
+            CollectionAssert.DoesNotContain(bodyRigIds, "rig.foot_radius");
+            CollectionAssert.DoesNotContain(bodyRigIds, "rig.shoulders");
+            Assert.That(bodyDefinitions.All(definition => definition.VisibleInCreator), Is.True);
+
+            CharacterMorphCatalog.TryGet("rig.spine", out CharacterMorphDefinition spineDefinition);
+            Assert.That(spineDefinition.Label, Is.EqualTo("Upper Waist"));
+
+            CharacterMorphCatalog.TryGet("body.waist", out CharacterMorphDefinition waistDefinition);
+            Assert.That(waistDefinition.Label, Is.EqualTo("Lower Waist"));
+        }
+
+        [Test]
+        public void HiddenBodyMorphLiteChannelsRemainAvailableForRecipes()
+        {
+            Assert.That(CharacterMorphCatalog.TryGet("rig.waist", out CharacterMorphDefinition waist), Is.True);
+            Assert.That(waist.VisibleInCreator, Is.False);
+            Assert.That(waist.RigChannel, Is.EqualTo(CharacterRigProportionChannel.Waist));
+
+            Assert.That(CharacterMorphCatalog.TryGet("rig.foot_radius", out CharacterMorphDefinition footRadius), Is.True);
+            Assert.That(footRadius.VisibleInCreator, Is.False);
+            Assert.That(footRadius.DriverType, Is.EqualTo(CharacterMorphDriverType.RigParameter));
+            Assert.That(footRadius.RigChannel, Is.EqualTo(CharacterRigProportionChannel.FootRadius));
+
+            Assert.That(CharacterMorphCatalog.TryGet("rig.shoulders", out CharacterMorphDefinition shoulders), Is.True);
+            Assert.That(shoulders.VisibleInCreator, Is.False);
+            Assert.That(shoulders.RigChannel, Is.EqualTo(CharacterRigProportionChannel.Shoulders));
         }
 
         [Test]

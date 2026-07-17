@@ -29,9 +29,11 @@ flowchart LR
         IkBridge["CharacterRigAnimatorIkBridge<br/>Animator IK entrypoint"]
         Growth["StatGrowthDefinition<br/>stat to morph mapping"]
         Profile["CharacterProfile<br/>capture and apply recipes"]
-        Recipe["CharacterRecipe<br/>sex, skin, stable morph values"]
+        Recipe["CharacterRecipe<br/>sex, skin, eye material, stable morph values"]
         Preset["CharacterPresetLibrary<br/>authored starter recipes"]
         RuntimePresets["Preset save repository<br/>runtime JSON presets"]
+        SkinColors["Skin color save repository<br/>runtime JSON swatches"]
+        EyePalette["CharacterEyeMaterialPalette<br/>authored eye materials"]
         Saves["Player save repository<br/>multiple JSON records"]
         Preview["CharacterPreviewControls<br/>native focus and blend"]
     end
@@ -49,6 +51,8 @@ flowchart LR
     DemoUI -->|"SetMorph, SetSex, Reset"| Controller
     DemoUI -->|"Load recipe"| Profile
     DemoUI -->|"Save and load runtime presets"| RuntimePresets
+    DemoUI -->|"Save custom skin colours"| SkinColors
+    DemoUI -->|"Select eye material"| EyePalette
     Finalize -->|"CaptureRecipe"| Profile
     Finalize --> Saves
     Finalize --> Preview
@@ -66,6 +70,7 @@ flowchart LR
     Controller <--> Recipes
     Profile <--> Recipe
     Profile <--> Preset
+    Profile --> EyePalette
     RuntimePresets <--> Recipe
     Profile --> Controller
     Controller --> Bindings
@@ -75,7 +80,7 @@ flowchart LR
 
 The stable morph ID is the boundary between presentation and model-specific data. For example, the UI uses `body.weight`; only the catalog needs to know the imported FBX blendshape names or skeletal rig channel. This keeps the controller API readable and reduces direct dependencies on the current character asset.
 
-Blendshape and skeletal responsibilities are deliberately split. Surface changes such as face, breast, glutes, muscle, and weight drive blendshapes. Proportion changes such as height, shoulder width, hips, and hidden BML-style rig channels drive bones through `CharacterRigProportionDriver`.
+Blendshape and skeletal responsibilities are deliberately split. Surface changes such as face, breast, glutes, muscle, weight, and lower waist drive blendshapes. Height, shoulder width, hips, and the Body tab's BML-style rig channels drive bones through `CharacterRigProportionDriver`.
 
 `CharacterMorphDefinition` is an abstract base class. Its two concrete subclasses inherit the shared metadata and shape-name lookup, then override the valid range, required blendshapes, and weight calculation. The controller uses the base type and delegates those differences polymorphically.
 
@@ -101,7 +106,7 @@ INITIALISE
 
     bind each authored UI row to its catalogue definition
     create a fallback row only when an authored row is missing
-    skip hidden backend definitions in the creator UI
+    show visible catalog definitions in their configured creator tabs
     select the configured default sex and display the default morph group
 ```
 
@@ -206,13 +211,14 @@ FINALIZE PLAYER
 ## Presentation Summary
 
 - The UI knows stable IDs, labels and ranges, not mesh indices.
-- Hidden BML-style backend channels can be tested in the inspector without becoming creator sliders.
+- The curated BML-style rig channels have individual Body sliders; hidden compatibility channels can still be tested through recipes or directly in the inspector.
 - The controller encapsulates recipes, character switching and blendshape application.
 - The rig driver owns skeletal proportion changes, bind-pose restore and optional grounding.
 - Inheritance removes morph-type decisions from the controller: each definition owns its behaviour.
 - Stat-growth definitions connect normalized gameplay values to muscle and body-fat morphs without owning progression rules.
 - Male and female recipes are independent and remain in memory while switching.
 - One versioned recipe shape is shared by authored presets, runtime presets, NPC profiles and durable player records.
+- Recipes include eye material ID and either a skin tone ID or a custom skin colour.
 - Player names and stable record IDs live outside reusable appearance recipes.
 - Host games can replace preset/player repositories or subscribe to save/load events without changing the menu UI.
 - The preview camera stays dependency-free and hands off to an optional gameplay camera natively.

@@ -297,31 +297,31 @@ namespace Sol.CharacterCustomization
 
     public static class CharacterMorphCatalog
     {
-        public const string RigBackendGroup = "Rig Backend";
+        public const string BodyGroup = "Body";
 
         private static readonly CharacterMorphDefinition[] Morphs =
         {
             new PositiveOnlyMorphDefinition(
-                "body.muscle", "Muscle", "Body", "Body_Stat_Muscle",
+                "body.muscle", "Muscle", BodyGroup, "Body_Stat_Muscle",
                 femalePositiveShapeName: "Body_Stat_Muscle"),
-            new BipolarMorphDefinition("body.weight", "Body Weight", "Body", "Body_Stat_Weight"),
+            new BipolarMorphDefinition("body.weight", "Body Weight", BodyGroup, "Body_Stat_Weight"),
             new BipolarMorphDefinition(
-                "body.height", "Height", "Body", "Body_Height",
+                "body.height", "Height", BodyGroup, "Body_Height",
                 driverType: CharacterMorphDriverType.BoneScale,
                 rigChannel: CharacterRigProportionChannel.Height),
-            new PositiveOnlyMorphDefinition("body.breast", "Breast", "Body", "Body_Breast"),
-            new BipolarMorphDefinition("body.glutes", "Glutes", "Body", "Body_Glutes"),
+            new PositiveOnlyMorphDefinition("body.breast", "Breast", BodyGroup, "Body_Breast"),
+            new BipolarMorphDefinition("body.glutes", "Glutes", BodyGroup, "Body_Glutes"),
             new BipolarMorphDefinition(
-                "body.shoulder_width", "Shoulder Width", "Body", "Body_ShoulderWidth",
-                driverType: CharacterMorphDriverType.BoneOffset,
-                rigChannel: CharacterRigProportionChannel.ShoulderWidth),
-            new BipolarMorphDefinition("body.chest_width", "Chest Width", "Body", "Body_ChestWidth"),
-            new BipolarMorphDefinition("body.waist", "Waist", "Body", "Body_Waist"),
+                "body.shoulder_width", "Shoulder Width", BodyGroup, "Body_ShoulderWidth",
+                driverType: CharacterMorphDriverType.BoneScale,
+                rigChannel: CharacterRigProportionChannel.Shoulders),
+            new BipolarMorphDefinition("body.chest_width", "Chest Width", BodyGroup, "Body_ChestWidth"),
+            new BipolarMorphDefinition("body.waist", "Lower Waist", BodyGroup, "Body_Waist"),
             new BipolarMorphDefinition(
-                "body.hips", "Hips", "Body", "Body_Hips",
+                "body.hips", "Hips", BodyGroup, "Body_Hips",
                 driverType: CharacterMorphDriverType.BoneOffset,
                 rigChannel: CharacterRigProportionChannel.HipsWidth),
-            new BipolarMorphDefinition("head.weight", "Head Weight", "Body", "Head_Stat_Weight"),
+            new BipolarMorphDefinition("head.weight", "Head Weight", BodyGroup, "Head_Stat_Weight"),
 
             new BipolarMorphDefinition("head.jaw.bite", "Jaw Bite", "Jaw / Chin", "Head_Jaw_Bite"),
             new BipolarMorphDefinition("head.jaw.shape", "Jaw Shape", "Jaw / Chin", "Head_Jaw_Shape"),
@@ -364,21 +364,21 @@ namespace Sol.CharacterCustomization
                 femaleBaseShapeName: "Head_Ears_Rotation",
                 maleBaseShapeName: "Head_Ear_Rotation"),
 
-            HiddenRig("rig.upper_body", "Upper Body", CharacterRigProportionChannel.UpperBody),
-            HiddenRig("rig.lower_body", "Lower Body", CharacterRigProportionChannel.LowerBody),
-            HiddenRig("rig.spine", "Spine", CharacterRigProportionChannel.Spine),
-            HiddenRig("rig.chest", "Chest", CharacterRigProportionChannel.Chest),
-            HiddenRig("rig.waist", "Waist", CharacterRigProportionChannel.Waist),
-            HiddenRig("rig.head", "Head Scale", CharacterRigProportionChannel.Head),
-            HiddenRig("rig.neck", "Neck Scale", CharacterRigProportionChannel.Neck),
-            HiddenRig("rig.shoulders", "Shoulder Scale", CharacterRigProportionChannel.Shoulders),
-            HiddenRig("rig.upper_arms", "Upper Arms", CharacterRigProportionChannel.UpperArms),
-            HiddenRig("rig.lower_arms", "Lower Arms", CharacterRigProportionChannel.LowerArms),
-            HiddenRig("rig.hands", "Hands", CharacterRigProportionChannel.Hands),
-            HiddenRig("rig.fingers", "Fingers", CharacterRigProportionChannel.Fingers),
-            HiddenRig("rig.legs", "Legs", CharacterRigProportionChannel.Legs),
-            HiddenRig("rig.feet", "Feet", CharacterRigProportionChannel.Feet),
-            HiddenRig("rig.foot_radius", "Foot Radius", CharacterRigProportionChannel.FootRadius, CharacterMorphDriverType.RigParameter)
+            RigMorph("rig.upper_body", "Upper Body", CharacterRigProportionChannel.UpperBody),
+            RigMorph("rig.lower_body", "Lower Body", CharacterRigProportionChannel.LowerBody),
+            RigMorph("rig.spine", "Upper Waist", CharacterRigProportionChannel.Spine),
+            RigMorph("rig.chest", "Chest", CharacterRigProportionChannel.Chest),
+            RigMorph("rig.waist", "Waist BML", CharacterRigProportionChannel.Waist, visibleInCreator: false),
+            RigMorph("rig.head", "Head Scale", CharacterRigProportionChannel.Head),
+            RigMorph("rig.neck", "Neck Scale", CharacterRigProportionChannel.Neck),
+            RigMorph("rig.shoulders", "Shoulder Scale", CharacterRigProportionChannel.Shoulders, visibleInCreator: false),
+            RigMorph("rig.upper_arms", "Upper Arms", CharacterRigProportionChannel.UpperArms),
+            RigMorph("rig.lower_arms", "Lower Arms", CharacterRigProportionChannel.LowerArms),
+            RigMorph("rig.hands", "Hands", CharacterRigProportionChannel.Hands),
+            RigMorph("rig.fingers", "Fingers", CharacterRigProportionChannel.Fingers),
+            RigMorph("rig.legs", "Legs", CharacterRigProportionChannel.Legs),
+            RigMorph("rig.feet", "Feet", CharacterRigProportionChannel.Feet),
+            RigMorph("rig.foot_radius", "Foot IK Radius", CharacterRigProportionChannel.FootRadius, CharacterMorphDriverType.RigParameter, false)
         };
 
         private static readonly Dictionary<string, CharacterMorphDefinition> ById = BuildLookup(Morphs);
@@ -421,19 +421,20 @@ namespace Sol.CharacterCustomization
             return lookup;
         }
 
-        private static BipolarMorphDefinition HiddenRig(
+        private static BipolarMorphDefinition RigMorph(
             string id,
             string label,
             CharacterRigProportionChannel channel,
-            CharacterMorphDriverType driverType = CharacterMorphDriverType.BoneScale)
+            CharacterMorphDriverType driverType = CharacterMorphDriverType.BoneScale,
+            bool visibleInCreator = true)
         {
             return new BipolarMorphDefinition(
                 id,
                 label,
-                RigBackendGroup,
+                BodyGroup,
                 string.Empty,
                 driverType: driverType,
-                visibleInCreator: false,
+                visibleInCreator: visibleInCreator,
                 rigChannel: channel);
         }
     }

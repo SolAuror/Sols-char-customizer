@@ -193,7 +193,6 @@ namespace Sol.CharacterCustomization
             }
 
             random ??= new System.Random();
-            controller.SetSex(random.Next(0, 2) == 0 ? CharacterSex.Female : CharacterSex.Male);
             controller.RandomizeCurrent(rangeScale, random);
             if (skinPalette != null && skinPalette.Tones.Count > 0)
             {

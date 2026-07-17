@@ -50,6 +50,7 @@ MonoBehaviour:
   femaleRoot: {fileID: 0}
   maleRoot: {fileID: 0}
   activeSex: 0
+  catalogAsset: {fileID: 11400000, guid: 04384cd30eebd474e9fdccdb44345a53, type: 2}
   rigProportionDriver: {fileID: 667402211724877441}
 --- !u!114 &667402211724877441
 MonoBehaviour:
@@ -63,6 +64,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a6d75020bbf48a6a61d1aa7b732bc21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterRigProportionDriver
+  proportionProfile: {fileID: 11400000, guid: b42d67d50fec06c4a950ca4a59afda6a, type: 2}
   enableFootIkGrounding: 1
   footProbeRadius: 0.05
   footProbeHeight: 0.35

@@ -277,11 +277,7 @@ namespace Sol.CharacterCustomization
             }
 
             refreshingSkin = true;
-            foreach (CharacterSkinSwatchButton swatch in EnumerateSkinSwatches())
-            {
-                bool selected = IsSkinSwatchSelected(swatch);
-                swatch.transform.localScale = selected ? Vector3.one * 1.08f : Vector3.one;
-            }
+            RefreshSkinSwatchSelection();
 
             Color color = profile.CurrentSkinColor;
             Color.RGBToHSV(color, out float hue, out float saturation, out float value);
@@ -297,6 +293,15 @@ namespace Sol.CharacterCustomization
 
             customColorPreview.color = color;
             refreshingSkin = false;
+        }
+
+        private void RefreshSkinSwatchSelection()
+        {
+            foreach (CharacterSkinSwatchButton swatch in EnumerateSkinSwatches())
+            {
+                bool selected = IsSkinSwatchSelected(swatch);
+                swatch.transform.localScale = selected ? Vector3.one * 1.08f : Vector3.one;
+            }
         }
 
         private void RefreshEyePanel()
@@ -1753,11 +1758,18 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            Color color = Color.HSVToRGB(hueSlider.value, saturationSlider.value, valueSlider.value);
+            float hue = hueSlider.value;
+            float saturation = saturationSlider.value;
+            float value = valueSlider.value;
+            Color color = Color.HSVToRGB(hue, saturation, value);
             color.a = 1f;
             profile.SetCustomSkinColor(color);
             customColorPreview.color = color;
-            RefreshSkinPanel();
+
+            // The sliders stay authoritative while dragging: an RGB->HSV round
+            // trip collapses hue and saturation whenever value or saturation is zero.
+            UpdateCustomColorSliderGradients(hue, saturation, value);
+            RefreshSkinSwatchSelection();
         }
 
         private void OnRoughnessChanged(float value)

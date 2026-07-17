@@ -77,7 +77,11 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Color normalColor = new(0.75f, 0.35f, 1f, 1f);
         [SerializeField] private Color pelvisOffsetColor = new(1f, 0.45f, 0.85f, 1f);
 
-        private readonly Dictionary<CharacterRigProportionChannel, float> channelValues = new();
+                                                                                                    // Keyed by morph ID rather than channel: multiple catalog morphs can
+                                                                                                    // share one rig channel (visible body.shoulder_width and the hidden
+                                                                                                    // BML-compatible rig.shoulders both drive Shoulders), and a full recipe
+                                                                                                    // application must not let a later zero wipe an earlier value.
+        private readonly Dictionary<string, ChannelContribution> channelValues = new(StringComparer.Ordinal);
         private readonly Dictionary<HumanBodyBones, BonePose> bindPose = new();
         private readonly Transform[] footTransforms = new Transform[2];
         private readonly Vector3[] footIkPositions = new Vector3[2];
@@ -100,7 +104,10 @@ namespace Sol.CharacterCustomization
         private float morphGroundOffset;
         private float ankleHeight;
         private bool hasAnkleHeight;
+        private Vector3 rootBindScale = Vector3.one;
+        private bool hasRootBindScale;
         private float currentFootRadiusScale = 1f;
+        private float currentFeetInputScale = 1f;
         private bool warnedMissingIkBridge;
 
         public bool CanApply => activeRoot != null && activeAnimator != null && activeAnimator.isHuman && bindPose.Count > 0;
@@ -153,7 +160,7 @@ namespace Sol.CharacterCustomization
             float clampedValue = Mathf.Clamp(value, definition.MinimumValue, 1f);
             if (definition.RigChannel != CharacterRigProportionChannel.None)
             {
-                channelValues[definition.RigChannel] = clampedValue;
+                channelValues[definition.Id] = new ChannelContribution(definition.RigChannel, clampedValue);
             }
 
             ApplyNow();
@@ -166,7 +173,7 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            channelValues[definition.RigChannel] = 0f;
+            channelValues[definition.Id] = new ChannelContribution(definition.RigChannel, 0f);
             ApplyNow();
         }
 
@@ -319,6 +326,8 @@ namespace Sol.CharacterCustomization
             Array.Clear(footTransforms, 0, footTransforms.Length);
             hasAnkleHeight = false;
             ankleHeight = 0f;
+            hasRootBindScale = activeRoot != null;
+            rootBindScale = hasRootBindScale ? activeRoot.localScale : Vector3.one;
             if (activeAnimator == null || !activeAnimator.isHuman)
             {
                 return;
@@ -375,10 +384,27 @@ namespace Sol.CharacterCustomization
 
         private void RestoreBindPose()
         {
-            foreach (BonePose pose in bindPose.Values)
+                                                                                                    // The humanoid Animator writes the hips position every frame, so the
+                                                                                                    // restore only rewrites positions of bones the driver actually moves
+                                                                                                    // (the side-offset bones). Restoring every captured position here
+                                                                                                    // would cancel animated hip motion in the LateUpdate path.
+            foreach (KeyValuePair<HumanBodyBones, BonePose> entry in bindPose)
             {
-                pose.Restore();
+                entry.Value.Restore(IsPositionEditedBone(entry.Key));
             }
+
+            if (hasRootBindScale && activeRoot != null)
+            {
+                activeRoot.localScale = rootBindScale;
+            }
+        }
+
+        private static bool IsPositionEditedBone(HumanBodyBones bone)
+        {
+            return bone == HumanBodyBones.LeftShoulder ||
+                   bone == HumanBodyBones.RightShoulder ||
+                   bone == HumanBodyBones.LeftUpperLeg ||
+                   bone == HumanBodyBones.RightUpperLeg;
         }
 
         private void ResetGroundingState()
@@ -390,6 +416,7 @@ namespace Sol.CharacterCustomization
             lastRootPosition = Vector3.zero;
             morphGroundOffset = 0f;
             currentFootRadiusScale = 1f;
+            currentFeetInputScale = 1f;
             warnedMissingIkBridge = false;
 
             for (int index = 0; index < footGrounded.Length; index++)
@@ -409,7 +436,7 @@ namespace Sol.CharacterCustomization
         {
                                                                                                             // BML expresses body controls as neutral 1.0 scales. CharacterEditor
                                                                                                             // stores recipes as -1..1 values, then maps them through the rig
-                                                                                                            // profile so hidden BML test channels and visible creator sliders can
+                                                                                                            // profile so BML-style rig channels and visible creator sliders can
                                                                                                             // use the same evaluator without changing saved recipe IDs.
 
             float heightScale = EvaluateScale(CharacterRigProportionChannel.Height, 0.92f, 1.08f);
@@ -417,7 +444,7 @@ namespace Sol.CharacterCustomization
             float rootScale = heightScale + lowerBodyScale - 1f;
             if (activeRoot != null)
             {
-                activeRoot.localScale = Vector3.one * rootScale;
+                activeRoot.localScale = (hasRootBindScale ? rootBindScale : Vector3.one) * rootScale;
             }
 
             float spineInputScale = EvaluateScale(CharacterRigProportionChannel.Spine, 0.5f, 1.5f);
@@ -434,6 +461,7 @@ namespace Sol.CharacterCustomization
             float legsInputScale = EvaluateScale(CharacterRigProportionChannel.Legs, 0.8f, 1.2f);
             float feetInputScale = EvaluateScale(CharacterRigProportionChannel.Feet, 0.5f, 1.5f);
             currentFootRadiusScale = EvaluateScale(CharacterRigProportionChannel.FootRadius, 0.5f, 1.5f);
+            currentFeetInputScale = feetInputScale;
 
             // These compensating ratios follow BML's scale chain. Each solve starts
             // from the captured bind pose so repeated slider edits do not drift.
@@ -535,7 +563,16 @@ namespace Sol.CharacterCustomization
                 return inspectorValue;
             }
 
-            return channelValues.TryGetValue(channel, out float value) ? value : 0f;
+            float sum = 0f;
+            foreach (ChannelContribution contribution in channelValues.Values)
+            {
+                if (contribution.Channel == channel)
+                {
+                    sum += contribution.Value;
+                }
+            }
+
+            return Mathf.Clamp(sum, -1f, 1f);
         }
 
         private bool TryGetInspectorValue(CharacterRigProportionChannel channel, out float value)
@@ -601,12 +638,13 @@ namespace Sol.CharacterCustomization
             Vector3 footPosition = footTransforms[index].position;
             Vector3 origin = new(footPosition.x, activeRoot.position.y + stepHeight, footPosition.z);
             float distance = stepHeight * 2f;
-            groundingProbeStates[index].RecordProbe(footPosition, origin, footProbeRadius * currentFootRadiusScale, distance);
+            float probeRadius = ResolveFootProbeRadius();
+            groundingProbeStates[index].RecordProbe(footPosition, origin, probeRadius, distance);
 
                                                                                                                                 // Adapted from BML's BipedalKinematics: probe from above each animated
                                                                                                                                 // foot, then blend the resulting target through Animator IK.
 
-            if (Physics.SphereCast(origin, footProbeRadius * currentFootRadiusScale, Vector3.down, out RaycastHit hit, 
+            if (Physics.SphereCast(origin, probeRadius, Vector3.down, out RaycastHit hit, 
                                                         distance, groundingLayers, QueryTriggerInteraction.Ignore))
             {
                 float feetHeight = activeRoot.position.y - hit.point.y;
@@ -626,6 +664,12 @@ namespace Sol.CharacterCustomization
             footIkNormals[index] = Vector3.up;
             footIkRotations[index] = activeRoot.rotation;
             groundingProbeStates[index].RecordMiss(footIkPositions[index]);
+        }
+
+        private float ResolveFootProbeRadius()
+        {
+            float rootScale = activeRoot != null ? activeRoot.localScale.y : 1f;
+            return Mathf.Max(0.001f, footProbeRadius * currentFootRadiusScale * rootScale * currentFeetInputScale);
         }
 
         private void UpdateMorphGroundOffset()
@@ -680,7 +724,7 @@ namespace Sol.CharacterCustomization
         private void ApplyFootIk(AvatarIKGoal goal, int index)
         {
             Vector3 targetPosition = activeAnimator.GetIKPosition(goal);
-            Quaternion targetRotation = activeAnimator.GetIKRotation(goal);
+            Quaternion targetRotation = footIkRotations[index];
             Vector3 localTargetPosition = activeRoot.InverseTransformPoint(targetPosition);
             Vector3 localIkPosition = activeRoot.InverseTransformPoint(footIkPositions[index]);
 
@@ -692,8 +736,6 @@ namespace Sol.CharacterCustomization
             targetPosition = activeRoot.TransformPoint(localTargetPosition);
             targetPosition += footIkNormals[index] * morphGroundOffset;
 
-            Quaternion rotationOffset = Quaternion.Inverse(targetRotation) * footIkRotations[index];
-            targetRotation *= rotationOffset;
             if (!hasLastFootRotation[index])
             {
                 lastFootRotations[index] = targetRotation;
@@ -769,6 +811,18 @@ namespace Sol.CharacterCustomization
             Gizmos.DrawWireSphere(target, 0.035f);
         }
 
+        private readonly struct ChannelContribution
+        {
+            public ChannelContribution(CharacterRigProportionChannel channel, float value)
+            {
+                Channel = channel;
+                Value = value;
+            }
+
+            public CharacterRigProportionChannel Channel { get; }
+            public float Value { get; }
+        }
+
         private readonly struct BonePose
         {
             public BonePose(Transform transform)
@@ -782,14 +836,18 @@ namespace Sol.CharacterCustomization
             public Vector3 LocalPosition { get; }
             public Vector3 LocalScale { get; }
 
-            public void Restore()
+            public void Restore(bool includePosition)
             {
                 if (Transform == null)
                 {
                     return;
                 }
 
-                Transform.localPosition = LocalPosition;
+                if (includePosition)
+                {
+                    Transform.localPosition = LocalPosition;
+                }
+
                 Transform.localScale = LocalScale;
             }
         }

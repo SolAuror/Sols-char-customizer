@@ -14,5 +14,50 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterRigProportionProfile
   channelRanges:
   - channel: 1
-    minimumScale: -1
-    maximumScale: 1
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 4
+    minimumScale: 0.92
+    maximumScale: 1.08
+  - channel: 5
+    minimumScale: 0.92
+    maximumScale: 1.08
+  - channel: 6
+    minimumScale: 0.94
+    maximumScale: 1.06
+  - channel: 7
+    minimumScale: 0.92
+    maximumScale: 1.1
+  - channel: 8
+    minimumScale: 0.92
+    maximumScale: 1.1
+  - channel: 9
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 10
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 11
+    minimumScale: 0.92
+    maximumScale: 1.1
+  - channel: 12
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 13
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 14
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 15
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 16
+    minimumScale: 0.94
+    maximumScale: 1.08
+  - channel: 17
+    minimumScale: 0.9
+    maximumScale: 1.1
+  - channel: 18
+    minimumScale: 0.9
+    maximumScale: 1.1

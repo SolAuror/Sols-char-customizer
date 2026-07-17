@@ -42,6 +42,8 @@ namespace Sol.CharacterCustomization
         private bool isBlending;
         private bool customizationInputEnabled = true;
         private readonly List<RaycastResult> interfaceHits = new();
+        private Transform cachedBoundsRoot;
+        private Renderer[] cachedBoundsRenderers = Array.Empty<Renderer>();
 
         public Camera PreviewCamera => previewCamera;
         public bool IsBlending => isBlending;
@@ -232,14 +234,26 @@ namespace Sol.CharacterCustomization
             Transform activeRoot = controller != null ? controller.ActiveCharacterRoot : null;
             if (activeRoot == null)
             {
+                cachedBoundsRoot = null;
+                cachedBoundsRenderers = Array.Empty<Renderer>();
                 return focusOffset;
             }
 
-            Renderer[] renderers = activeRoot.GetComponentsInChildren<Renderer>(false);
+            if (cachedBoundsRoot != activeRoot)
+            {
+                cachedBoundsRoot = activeRoot;
+                cachedBoundsRenderers = activeRoot.GetComponentsInChildren<Renderer>(true);
+            }
+
             bool hasBounds = false;
             Bounds combinedBounds = default;
-            foreach (Renderer targetRenderer in renderers)
+            foreach (Renderer targetRenderer in cachedBoundsRenderers)
             {
+                if (targetRenderer == null || !targetRenderer.enabled || !targetRenderer.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
                 if (!hasBounds)
                 {
                     combinedBounds = targetRenderer.bounds;
