@@ -16,7 +16,7 @@ This project builds a scalable character customization system for adventure-styl
 The public system talks in stable IDs such as `body.weight`, `body.muscle`, and `body.height`. Model-specific MPFB blendshape names stay inside the morph catalog, so the UI, save data, and host-game API can remain readable and reusable. Surface morphs are handled by blendshapes; skeletal proportion morphs are routed through the rig driver.
 
 <p align="center">
-  <img src="Assets/CharCustomization/image.png" alt="Runtime character customization menu with morph sliders and character preview" width="900">
+  <img src="profile.png" alt="Runtime character customization menu with morph sliders and character preview" width="900">
 </p>
 
 ## Features
