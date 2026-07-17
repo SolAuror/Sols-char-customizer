@@ -153,6 +153,7 @@ dotnet build Assembly-CSharp-Editor.csproj -nologo
 - [`Documentation/API.md`](Documentation/API.md) is the methods and API guide for host-game integration.
 - [`Documentation/SystemPresentationArchitecture.md`](Documentation/SystemPresentationArchitecture.md) contains the architecture notes and pseudocode used for the system presentation.
 - [`Documentation/ThirdPartyNotices.md`](Documentation/ThirdPartyNotices.md) records BodyMorphLite attribution and MIT notice requirements for adapted rig/IK behavior.
+- [`LICENSE.md`](LICENSE.md) states the project licence.
 
 ## Current Scope
 
@@ -177,7 +178,7 @@ Not included yet:
 - Verified plug-and-play setup on a brand-new humanoid character.
 - Full Play Mode IK parity tests for flat ground, steps, sex switching, and finalize handoff.
 - Hair, clothing, or equipment selectors.
-- Full installation, licence, version, changelog, and package metadata files for distribution.
+- Full installation, version, changelog, and package metadata files for distribution.
 
 ## Status
 

@@ -104,5 +104,5 @@ The BodyMorphLite merge currently passes generated runtime/editor builds and has
 3. Separate reusable runtime, UGUI, gameplay-demo, editor, and tests into assembly boundaries once the current demo is stable.
 4. Move demo-only FBX, materials, fonts, sprites, lighting, and scenes into a sample boundary during package extraction.
 5. Expand automated coverage for value clamping, bipolar weights, stat-growth mapping, recipe isolation, missing bindings, skeletal channels, skin rendering, and gameplay-camera handoff.
-6. Expand installation and packaging documentation, declare dependencies, audit imported asset redistribution rights, and add licence, version, and changelog files.
+6. Expand installation and packaging documentation, declare dependencies, audit imported asset redistribution rights, and add version and changelog files.
 7. Add appearance option providers for hair and clothing only when those selectors become active scope.
