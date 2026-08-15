@@ -1,5 +1,7 @@
 # License
 
+2026 © Sol Auror
+
 This project is licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).
 
 You may share and adapt this project with attribution for non-commercial use.
