@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>A Unity 6 reusable character creation prototype for GAD176 Project 1.</strong><br>
+  <strong>A Unity 6 reusable character creation prototype for a university project.</strong><br>
   Stable morph IDs, authored UI, runtime presets, finalized player saves, and host-game extension hooks.
 </p>
 
@@ -131,8 +131,6 @@ controller.SetStatGrowth("body_fat", normalizedBodyFat);
 
 ## Validation
 
-Run the editor validators before presenting, packaging, or handing off the project:
-
 ```text
 Tools > Character Customization > Validate Morph Demo
 Tools > Sol > Character Customization > Validate Selected Character Setup
@@ -153,7 +151,6 @@ dotnet build Assembly-CSharp-Editor.csproj -nologo
 - [`Documentation/API.md`](Documentation/API.md) is the methods and API guide for host-game integration.
 - [`Documentation/SystemPresentationArchitecture.md`](Documentation/SystemPresentationArchitecture.md) contains the architecture notes and pseudocode used for the system presentation.
 - [`Documentation/ThirdPartyNotices.md`](Documentation/ThirdPartyNotices.md) records BodyMorphLite attribution and MIT notice requirements for adapted rig/IK behavior.
-- [`LICENSE.md`](LICENSE.md) states the project licence.
 
 ## Current Scope
 
@@ -182,4 +179,4 @@ Not included yet:
 
 ## Status
 
-The system is presentation-ready for the GAD176 Project 1 prototype brief and now has the core BodyMorphLite-style rig backend merged in a CharacterEditor-safe way. Remaining work is focused on Unity Play Mode validation, package boundary cleanup, demo asset separation, licensing audit, and broader automated test coverage.
+The system is presentation-ready and now has the core BodyMorphLite-style rig backend merged in a CharacterEditor-safe way. Remaining work is focused on Unity Play Mode validation, package boundary cleanup, demo asset separation, licensing audit, and broader automated test coverage.
