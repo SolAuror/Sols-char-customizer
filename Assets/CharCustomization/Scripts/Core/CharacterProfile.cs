@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Sol.CharacterCustomization
@@ -13,11 +14,21 @@ namespace Sol.CharacterCustomization
         [SerializeField] private CharacterPreset authoredPreset;
         [SerializeField] private bool applyOnAwake;
 
+        [Header("NPC Bake")]
+        [Tooltip("On Start, folds body blendshapes into a shared baked mesh. For NPCs whose appearance does not change; call BakeAppearance again after later edits.")]
+        [SerializeField] private bool bakeOnStart;
+        [Tooltip("Destroys the hidden sex's character root when baking, so each NPC carries one rig.")]
+        [SerializeField] private bool releaseInactiveSexOnBake = true;
+
         [Header("Skin")]
         [SerializeField] private CharacterSkinPalette skinPalette;
+        [Tooltip("Skin colour space for Sol/Character Skin materials. Empty uses the built-in human model.")]
+        [SerializeField] private CharacterSkinProfile skinProfile;
         [SerializeField] private string[] skinColorPropertyNames = { "_BaseColor", "_Color" };
         [SerializeField] private string[] skinRoughnessPropertyNames = { "_Smoothness", "_Glossiness" };
         [SerializeField] private bool invertRoughnessForSmoothness = true;
+        [Tooltip("In Play Mode, gives each character its own copy of Sol/Character Skin materials and writes skin values to it, keeping those renderers in the SRP Batcher. Other materials use property blocks.")]
+        [SerializeField] private bool instanceSkinMaterials = true;
         [SerializeField, Range(0f, 1f)] private float skinRoughness = 0.5f;
         [SerializeField] private Renderer[] femaleSkinRenderers = Array.Empty<Renderer>();
         [SerializeField] private Renderer[] maleSkinRenderers = Array.Empty<Renderer>();
@@ -33,6 +44,9 @@ namespace Sol.CharacterCustomization
         private string skinToneId = CharacterRecipe.DefaultSkinToneId;
         private bool usesCustomSkinColor;
         private Color customSkinColor = Color.white;
+        private CharacterSkinParameters skinParameters = CharacterSkinParameters.Default;
+        private readonly Dictionary<Color, CharacterSkinParameters> matchedSkinParameters = new();
+        private readonly Dictionary<Renderer, Material[]> skinMaterialInstances = new();
         private string eyeMaterialId = CharacterRecipe.DefaultEyeMaterialId;
         private Renderer[] resolvedFemaleEyeRenderers;
         private Renderer[] resolvedMaleEyeRenderers;
@@ -43,6 +57,8 @@ namespace Sol.CharacterCustomization
         public string SkinToneId => skinToneId;
         public bool UsesCustomSkinColor => usesCustomSkinColor;
         public Color CurrentSkinColor => ResolveSkinColor();
+        public CharacterSkinProfile SkinProfile => skinProfile;
+        public CharacterSkinParameters SkinParameters => skinParameters;
         public float SkinRoughness => skinRoughness;
         public string EyeMaterialId => string.IsNullOrWhiteSpace(eyeMaterialId)
             ? CharacterRecipe.DefaultEyeMaterialId
@@ -61,6 +77,11 @@ namespace Sol.CharacterCustomization
             if (defaultTone != null)
             {
                 skinToneId = defaultTone.Id;
+                skinParameters = ResolveToneParameters(defaultTone);
+            }
+            else if (skinProfile != null)
+            {
+                skinParameters = skinProfile.DefaultParameters;
             }
 
             CharacterEyeMaterialOption defaultEye = eyePalette != null ? eyePalette.GetDefault() : null;
@@ -80,6 +101,37 @@ namespace Sol.CharacterCustomization
             }
         }
 
+        // Start runs after every Awake, so the controller and rig driver are bound and
+        // any authored preset has been applied before the bake.
+        private void Start()
+        {
+            if (bakeOnStart && !BakeAppearance(releaseInactiveSexOnBake, out string error))
+            {
+                Debug.LogWarning($"Could not bake character appearance. {error}", this);
+            }
+        }
+
+        public bool BakeAppearance(bool releaseInactiveSex, out string error)
+        {
+            if (controller == null)
+            {
+                error = "A character profile cannot bake without a morph controller.";
+                return false;
+            }
+
+            if (!controller.BakeActiveCharacter(out error))
+            {
+                return false;
+            }
+
+            if (releaseInactiveSex)
+            {
+                controller.ReleaseInactiveSexRoot();
+            }
+
+            return true;
+        }
+
         public CharacterRecipe CaptureRecipe()
         {
             if (controller == null)
@@ -96,6 +148,7 @@ namespace Sol.CharacterCustomization
                 customSkinColor,
                 EyeMaterialId,
                 controller.CaptureMorphValues());
+            recipe.SetSkinParameters(skinParameters);
             return recipe;
         }
 
@@ -125,6 +178,14 @@ namespace Sol.CharacterCustomization
                 SetSkinTone(recipe.SkinToneId);
             }
 
+            // Version 3 recipes carry exact skin parameters; older ones keep the values
+            // matched from their tone or custom colour above.
+            if (recipe.HasSkinParameters)
+            {
+                skinParameters = recipe.SkinParameters;
+                ApplySkin();
+            }
+
             SetEyeMaterial(recipe.EyeMaterialId);
             return true;
         }
@@ -151,8 +212,29 @@ namespace Sol.CharacterCustomization
             skinToneId = tone.Id;
             usesCustomSkinColor = false;
             customSkinColor = tone.Color;
+            skinParameters = ResolveToneParameters(tone);
             ApplySkin();
             return true;
+        }
+
+        // Sets skin colour directly in the profile's colour space. The matching colour
+        // is kept as the custom colour so non-skin-shader materials and colour
+        // swatches stay in step.
+        public void SetSkinParameters(CharacterSkinParameters parameters)
+        {
+            skinParameters = new CharacterSkinParameters(parameters.Melanin, parameters.Hemoglobin, parameters.Undertone);
+            usesCustomSkinColor = true;
+            customSkinColor = EvaluateSkinColor(skinParameters);
+            ApplySkin();
+        }
+
+        // sRGB colour of a parameter set without regional variation, for UI swatches.
+        public Color EvaluateSkinColor(CharacterSkinParameters parameters)
+        {
+            Color linear = skinProfile != null
+                ? skinProfile.EvaluateLinear(parameters)
+                : SkinColorModel.EvaluateLinear(parameters);
+            return linear.gamma;
         }
 
         public void SetCustomSkinColor(Color color)
@@ -163,6 +245,7 @@ namespace Sol.CharacterCustomization
                 Mathf.Clamp01(color.g),
                 Mathf.Clamp01(color.b),
                 Mathf.Clamp01(color.a));
+            skinParameters = MatchSkinParameters(customSkinColor);
             ApplySkin();
         }
 
@@ -216,6 +299,28 @@ namespace Sol.CharacterCustomization
             ApplyEyeMaterial();
         }
 
+        private CharacterSkinParameters ResolveToneParameters(CharacterSkinTone tone)
+        {
+            return tone.HasParameters ? tone.Parameters : MatchSkinParameters(tone.Color);
+        }
+
+        // Colour matching searches the whole colour space, so results are cached per
+        // colour; palettes and saved swatches repeat the same few colours.
+        private CharacterSkinParameters MatchSkinParameters(Color srgbColor)
+        {
+            srgbColor.a = 1f;
+            if (matchedSkinParameters.TryGetValue(srgbColor, out CharacterSkinParameters cached))
+            {
+                return cached;
+            }
+
+            CharacterSkinParameters matched = skinProfile != null
+                ? skinProfile.FindClosest(srgbColor)
+                : SkinColorModel.FindClosest(srgbColor.linear);
+            matchedSkinParameters[srgbColor] = matched;
+            return matched;
+        }
+
         private Color ResolveSkinColor()
         {
             if (usesCustomSkinColor)
@@ -255,6 +360,16 @@ namespace Sol.CharacterCustomization
                     continue;
                 }
 
+                if (TryGetSkinMaterialInstances(targetRenderer, out Material[] instances))
+                {
+                    foreach (Material instance in instances)
+                    {
+                        ApplySkinMaterial(instance, roughnessPropertyValue);
+                    }
+
+                    continue;
+                }
+
                 propertyBlock ??= new MaterialPropertyBlock();
                 targetRenderer.GetPropertyBlock(propertyBlock);
                 foreach (int propertyId in skinColorPropertyIds)
@@ -267,9 +382,102 @@ namespace Sol.CharacterCustomization
                     propertyBlock.SetFloat(propertyId, roughnessPropertyValue);
                 }
 
+                // Read only by Sol/Character Skin materials; other shaders ignore them.
+                propertyBlock.SetFloat(SolSkinShaderIds.Melanin, skinParameters.Melanin);
+                propertyBlock.SetFloat(SolSkinShaderIds.Hemoglobin, skinParameters.Hemoglobin);
+                propertyBlock.SetFloat(SolSkinShaderIds.Undertone, skinParameters.Undertone);
+                if (skinProfile != null)
+                {
+                    skinProfile.ApplyTo(propertyBlock);
+                }
+
                 targetRenderer.SetPropertyBlock(propertyBlock);
                 propertyBlock.Clear();
             }
+        }
+
+        private void ApplySkinMaterial(Material material, float roughnessPropertyValue)
+        {
+            material.SetFloat(SolSkinShaderIds.Melanin, skinParameters.Melanin);
+            material.SetFloat(SolSkinShaderIds.Hemoglobin, skinParameters.Hemoglobin);
+            material.SetFloat(SolSkinShaderIds.Undertone, skinParameters.Undertone);
+            foreach (int propertyId in skinRoughnessPropertyIds)
+            {
+                if (material.HasProperty(propertyId))
+                {
+                    material.SetFloat(propertyId, roughnessPropertyValue);
+                }
+            }
+
+            if (skinProfile != null)
+            {
+                skinProfile.ApplyTo(material);
+            }
+        }
+
+        // Replaces each Sol/Character Skin material on the renderer with a
+        // per-character copy, once. Renderers without one keep property blocks.
+        private bool TryGetSkinMaterialInstances(Renderer targetRenderer, out Material[] instances)
+        {
+            if (skinMaterialInstances.TryGetValue(targetRenderer, out instances))
+            {
+                return instances.Length > 0;
+            }
+
+            instances = Array.Empty<Material>();
+            if (!instanceSkinMaterials || !Application.isPlaying)
+            {
+                return false;
+            }
+
+            Material[] materials = targetRenderer.sharedMaterials;
+            var created = new List<Material>();
+            for (int index = 0; index < materials.Length; index++)
+            {
+                if (!SolSkinShaderIds.IsSkinMaterial(materials[index]))
+                {
+                    continue;
+                }
+
+                materials[index] = new Material(materials[index])
+                {
+                    name = $"{materials[index].name} ({name})"
+                };
+                created.Add(materials[index]);
+            }
+
+            if (created.Count > 0)
+            {
+                targetRenderer.sharedMaterials = materials;
+                targetRenderer.SetPropertyBlock(null);
+                instances = created.ToArray();
+            }
+
+            skinMaterialInstances[targetRenderer] = instances;
+            return instances.Length > 0;
+        }
+
+        private void OnDestroy()
+        {
+            foreach (KeyValuePair<Renderer, Material[]> entry in skinMaterialInstances)
+            {
+                // A character that outlives its profile, such as after the host game
+                // destroys the customization manager, keeps its skin materials.
+                if (entry.Key != null)
+                {
+                    continue;
+                }
+
+                foreach (Material instance in entry.Value)
+                {
+                    if (instance != null)
+                    {
+                        Destroy(instance);
+                    }
+                }
+            }
+
+            skinMaterialInstances.Clear();
         }
 
         private void ApplyEyeMaterial()

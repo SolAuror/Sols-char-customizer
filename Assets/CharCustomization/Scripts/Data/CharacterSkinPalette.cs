@@ -10,10 +10,15 @@ namespace Sol.CharacterCustomization
         [SerializeField] private string id;
         [SerializeField] private string label;
         [SerializeField] private Color color = Color.white;
+        [Tooltip("When set, the Sol skin shader uses these parameters. Otherwise they are matched from the colour.")]
+        [SerializeField] private bool hasParameters;
+        [SerializeField] private CharacterSkinParameters parameters = CharacterSkinParameters.Default;
 
         public string Id => id;
         public string Label => string.IsNullOrWhiteSpace(label) ? id : label;
         public Color Color => color;
+        public bool HasParameters => hasParameters;
+        public CharacterSkinParameters Parameters => parameters;
 
         public CharacterSkinTone(string id, string label, Color color)
         {

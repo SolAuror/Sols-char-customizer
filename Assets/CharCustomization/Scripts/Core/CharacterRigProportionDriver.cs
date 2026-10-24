@@ -68,6 +68,16 @@ namespace Sol.CharacterCustomization
         [SerializeField] private LayerMask groundingLayers = 1;
         [SerializeField] private bool warnWhenIkBridgeMissing = true;
 
+        [Header("Update")]
+        [Tooltip("Reapplies proportions every frame instead of only after edits. Needed only when something else writes bone scales or the edited bone positions, such as clips with scale curves. Translation DoF Avatars enable this automatically.")]
+        [SerializeField] private bool reapplyPoseEveryFrame;
+
+        [Header("Humanoid Avatar")]
+        [Tooltip("Rebuilds the humanoid Avatar from the morphed skeleton so retargeting and IK use the edited limb lengths.")]
+        [SerializeField] private bool rebuildAvatarOnSkeletalChange = true;
+        [Tooltip("Seconds without skeletal edits before the Avatar is rebuilt. Rebuilding rebinds the Animator, so it is deferred while sliders are dragged.")]
+        [SerializeField, Min(0f)] private float avatarRebuildDelay = 0.25f;
+
         [Header("Grounding Debug")]
         [SerializeField] private bool enableGroundingDebugDraw;
         [SerializeField] private Color probePathColor = new(0.25f, 0.6f, 1f, 1f);
@@ -86,8 +96,8 @@ namespace Sol.CharacterCustomization
         private readonly Transform[] footTransforms = new Transform[2];
         private readonly Vector3[] footIkPositions = new Vector3[2];
         private readonly Vector3[] footIkNormals = { Vector3.up, Vector3.up };
-        private readonly Quaternion[] footIkRotations = { Quaternion.identity, Quaternion.identity };
-        private readonly Quaternion[] lastFootRotations = { Quaternion.identity, Quaternion.identity };
+        private readonly Quaternion[] footSlopeRotations = { Quaternion.identity, Quaternion.identity };
+        private readonly Quaternion[] lastFootSlopeRotations = { Quaternion.identity, Quaternion.identity };
         private readonly bool[] hasLastFootRotation = new bool[2];
         private readonly float[] lastFootHeights = new float[2];
         private readonly bool[] footGrounded = new bool[2];
@@ -110,6 +120,21 @@ namespace Sol.CharacterCustomization
         private float currentFeetInputScale = 1f;
         private bool warnedMissingIkBridge;
 
+        // Per-bone edits from the last ApplyNow, relative to bind pose. The Avatar
+        // rebuild bakes these into the skeleton description.
+        private readonly Dictionary<HumanBodyBones, float> appliedBoneScales = new();
+        private readonly Dictionary<Transform, Vector3> appliedPositionOffsets = new();
+        private CharacterJointOffsetTable jointOffsetTable;
+        private CharacterJointOffsetBinding jointOffsets;
+        private string jointOffsetError;
+        private Avatar sourceAvatar;
+        private Avatar runtimeAvatar;
+        private bool avatarDirty;
+        private bool avatarMatchesSkeleton;
+        private bool poseDirty = true;
+        private bool animatorWritesEditedBonePositions;
+        private float lastSkeletalEditTime;
+
         public bool CanApply => activeRoot != null && activeAnimator != null && activeAnimator.isHuman && bindPose.Count > 0;
         public bool HasAnimatorIkBridge => activeIkBridge != null;
         public bool EnableFootIkGrounding
@@ -118,24 +143,62 @@ namespace Sol.CharacterCustomization
             set => enableFootIkGrounding = value;
         }
 
+        public bool RebuildAvatarOnSkeletalChange
+        {
+            get => rebuildAvatarOnSkeletalChange;
+            set => rebuildAvatarOnSkeletalChange = value;
+        }
+
+        public bool IsAvatarRebuildPending => avatarDirty && rebuildAvatarOnSkeletalChange;
+        public bool IsPoseDirty => poseDirty;
+        public bool ReapplyPoseEveryFrame
+        {
+            get => reapplyPoseEveryFrame;
+            set => reapplyPoseEveryFrame = value;
+        }
+
+        public CharacterJointOffsetBinding JointOffsets => jointOffsets;
+        public Avatar SourceAvatar => sourceAvatar;
+        public Avatar RuntimeAvatar => runtimeAvatar;
         public float GroundingWeight => groundingWeight;
         public float MorphGroundOffset => morphGroundOffset;
 
         public void Bind(Transform root, Animator animator)
         {
-            if (activeRoot == root && activeAnimator == animator)
+            Bind(root, animator, null);
+        }
+
+        // jointOffsetsTable: optional .solrig data that moves joints with the active
+        // character's blendshapes. See CharacterJointOffsetBinding.
+        public void Bind(Transform root, Animator animator, CharacterJointOffsetTable jointOffsetsTable)
+        {
+            if (activeRoot == root && activeAnimator == animator && jointOffsetTable == jointOffsetsTable)
             {
                 return;
             }
 
-            RestoreBindPose();
+            // Restoring the Avatar can evaluate the Animator, which runs the IK bridge
+            // and reapplies proportions, so the bind pose is restored after it.
+            RestoreSourceAvatar();
             if (activeIkBridge != null)
             {
                 activeIkBridge.Bind(null);
             }
 
+            RestoreBindPose();
+            jointOffsets?.Restore();
+            jointOffsets = null;
+            jointOffsetError = null;
+
             activeRoot = root;
             activeAnimator = animator;
+            jointOffsetTable = jointOffsetsTable;
+            sourceAvatar = activeAnimator != null ? activeAnimator.avatar : null;
+
+            // With translation DoF the Animator writes shoulder and upper-leg positions
+            // every frame, overwriting the width offsets unless they are reapplied.
+            animatorWritesEditedBonePositions = sourceAvatar != null && sourceAvatar.isHuman &&
+                                                sourceAvatar.humanDescription.hasTranslationDoF;
             activeIkBridge = activeAnimator != null
                 ? activeAnimator.GetComponent<CharacterRigAnimatorIkBridge>()
                 : null;
@@ -147,7 +210,22 @@ namespace Sol.CharacterCustomization
             channelValues.Clear();
             ResetGroundingState();
             CaptureBindPose();
+            BindJointOffsets();
             ApplyNow();
+            MarkSkeletonDirty();
+        }
+
+        // Called when the active character's blendshape weights change, so joints
+        // follow the reshaped mesh on the next pose application.
+        public void MarkJointOffsetsDirty()
+        {
+            if (jointOffsets == null)
+            {
+                return;
+            }
+
+            jointOffsets.MarkWeightsDirty();
+            MarkSkeletonDirty();
         }
 
         public void SetMorph(CharacterMorphDefinition definition, float value)
@@ -160,7 +238,13 @@ namespace Sol.CharacterCustomization
             float clampedValue = Mathf.Clamp(value, definition.MinimumValue, 1f);
             if (definition.RigChannel != CharacterRigProportionChannel.None)
             {
+                bool changed = !channelValues.TryGetValue(definition.Id, out ChannelContribution previous) ||
+                               !Mathf.Approximately(previous.Value, clampedValue);
                 channelValues[definition.Id] = new ChannelContribution(definition.RigChannel, clampedValue);
+                if (changed)
+                {
+                    MarkSkeletonDirty();
+                }
             }
 
             ApplyNow();
@@ -174,17 +258,36 @@ namespace Sol.CharacterCustomization
             }
 
             channelValues[definition.Id] = new ChannelContribution(definition.RigChannel, 0f);
+            MarkSkeletonDirty();
             ApplyNow();
+        }
+
+        // Bone scales and the edited bone positions are not written by humanoid
+        // animation, so a clean pose only needs reapplying after an edit.
+        public bool ApplyIfDirty()
+        {
+            if (!poseDirty && !reapplyPoseEveryFrame && !animatorWritesEditedBonePositions)
+            {
+                return false;
+            }
+
+            ApplyNow();
+            return !poseDirty;
         }
 
         public void ApplyNow()
         {
             if (!CanApply)
             {
+                poseDirty = true;
                 return;
             }
 
+            poseDirty = false;
+
             RestoreBindPose();
+            appliedPositionOffsets.Clear();
+            ApplyJointOffsets();
             ApplyBodyMorphLiteScales();
 
             ApplySideOffset(HumanBodyBones.LeftShoulder, HumanBodyBones.RightShoulder, 
@@ -194,6 +297,89 @@ namespace Sol.CharacterCustomization
                             GetChannelValue(CharacterRigProportionChannel.HipsWidth));
 
             UpdateMorphGroundOffset();
+        }
+
+        private void BindJointOffsets()
+        {
+            if (jointOffsetTable == null || activeRoot == null)
+            {
+                return;
+            }
+
+            Transform hips = activeAnimator != null && activeAnimator.isHuman
+                ? activeAnimator.GetBoneTransform(HumanBodyBones.Hips)
+                : null;
+            if (CharacterJointOffsetBinding.TryCreate(jointOffsetTable, activeRoot, hips, out jointOffsets, out string error))
+            {
+                return;
+            }
+
+            jointOffsetError = $"Joint offsets from '{jointOffsetTable.name}' are disabled. {error}";
+            Debug.LogWarning(jointOffsetError, this);
+        }
+
+        private void ApplyJointOffsets()
+        {
+            if (jointOffsets == null)
+            {
+                return;
+            }
+
+            jointOffsets.Evaluate();
+            jointOffsets.ApplyLocalPositions();
+            foreach (KeyValuePair<Transform, Vector3> entry in jointOffsets.LocalOffsets)
+            {
+                appliedPositionOffsets[entry.Key] = entry.Value;
+            }
+        }
+
+        public bool RebuildAvatarNow()
+        {
+            avatarDirty = false;
+            avatarMatchesSkeleton = false;
+            if (!CanApply || sourceAvatar == null || !sourceAvatar.isValid || !sourceAvatar.isHuman)
+            {
+                return false;
+            }
+
+            ApplyNow();
+            if (!HasSkeletalEdits())
+            {
+                AssignAvatar(sourceAvatar);
+                DestroyRuntimeAvatar();
+                avatarMatchesSkeleton = true;
+                UpdateMorphGroundOffset();
+                jointOffsets?.Settle();
+                return true;
+            }
+
+            if (!TryBuildMorphedDescription(out HumanDescription description, out string error))
+            {
+                Debug.LogWarning($"Could not rebuild the humanoid Avatar for '{activeAnimator.name}'. {error}", activeAnimator);
+                return false;
+            }
+
+            Avatar built = AvatarBuilder.BuildHumanAvatar(activeAnimator.gameObject, description);
+            if (built == null || !built.isValid || !built.isHuman)
+            {
+                Debug.LogWarning(
+                    $"AvatarBuilder produced an invalid humanoid Avatar for '{activeAnimator.name}'. Keeping the previous Avatar.",
+                    activeAnimator);
+                DestroyAvatar(built);
+                return false;
+            }
+
+            built.name = $"{sourceAvatar.name} (Morphed)";
+            built.hideFlags = HideFlags.DontSave;
+
+            Avatar previousRuntimeAvatar = runtimeAvatar;
+            runtimeAvatar = built;
+            AssignAvatar(built);
+            DestroyAvatar(previousRuntimeAvatar);
+            avatarMatchesSkeleton = true;
+            UpdateMorphGroundOffset();
+            jointOffsets?.Settle();
+            return true;
         }
 
         public bool ValidateBinding(out string error)
@@ -224,6 +410,20 @@ namespace Sol.CharacterCustomization
                     error = $"'{activeAnimator.name}' is missing required humanoid bone {bone}.";
                     return false;
                 }
+            }
+
+            if (rebuildAvatarOnSkeletalChange &&
+                (sourceAvatar == null || sourceAvatar.humanDescription.skeleton == null ||
+                 sourceAvatar.humanDescription.skeleton.Length == 0))
+            {
+                error = $"'{activeAnimator.name}' has no Avatar skeleton description, so the Avatar cannot be rebuilt after skeletal morphs.";
+                return false;
+            }
+
+            if (jointOffsetError != null)
+            {
+                error = jointOffsetError;
+                return false;
             }
 
             if (enableFootIkGrounding && activeIkBridge == null)
@@ -263,12 +463,17 @@ namespace Sol.CharacterCustomization
 
         private void LateUpdate()
         {
+            if (IsAvatarRebuildPending && Time.unscaledTime - lastSkeletalEditTime >= avatarRebuildDelay)
+            {
+                RebuildAvatarNow();
+            }
+
             if (enableFootIkGrounding && activeIkBridge != null)
             {
                 return;
             }
 
-            ApplyNow();
+            ApplyIfDirty();
             if (enableFootIkGrounding || enableGroundingDebugDraw)
             {
                 if (enableFootIkGrounding)
@@ -276,7 +481,7 @@ namespace Sol.CharacterCustomization
                     WarnIfGroundingBridgeMissing();
                 }
 
-                UpdateFootTargets();
+                UpdateFootTargets(false);
             }
         }
 
@@ -287,8 +492,8 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            ApplyNow();
-            UpdateFootTargets();
+            ApplyIfDirty();
+            UpdateFootTargets(true);
             ApplyPelvisHeight();
             ApplyFootIk(AvatarIKGoal.RightFoot, RightFootIndex);
             ApplyFootIk(AvatarIKGoal.LeftFoot, LeftFootIndex);
@@ -303,7 +508,199 @@ namespace Sol.CharacterCustomization
         {
             if (Application.isPlaying)
             {
+                MarkSkeletonDirty();
                 ApplyNow();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // A living character keeps its morphed body and Avatar: host games may
+            // destroy the customization manager once the character is finalized.
+            if (activeAnimator == null || activeAnimator.avatar != runtimeAvatar)
+            {
+                DestroyRuntimeAvatar();
+            }
+        }
+
+        private void MarkSkeletonDirty()
+        {
+            poseDirty = true;
+            avatarDirty = true;
+            avatarMatchesSkeleton = false;
+            lastSkeletalEditTime = Time.unscaledTime;
+        }
+
+        private bool HasSkeletalEdits()
+        {
+            foreach (float scale in appliedBoneScales.Values)
+            {
+                if (Mathf.Abs(scale - 1f) > 0.0001f)
+                {
+                    return true;
+                }
+            }
+
+            foreach (Vector3 offset in appliedPositionOffsets.Values)
+            {
+                if (offset.sqrMagnitude > 0.00000001f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryBuildMorphedDescription(out HumanDescription description, out string error)
+        {
+            description = sourceAvatar.humanDescription;
+            if (description.skeleton == null || description.skeleton.Length == 0)
+            {
+                error = "The source Avatar has no skeleton description.";
+                return false;
+            }
+
+            var bonesByName = new Dictionary<string, HumanBodyBones>(StringComparer.Ordinal);
+            foreach (KeyValuePair<HumanBodyBones, BonePose> entry in bindPose)
+            {
+                if (entry.Value.Transform != null)
+                {
+                    bonesByName[entry.Value.Transform.name] = entry.Key;
+                }
+            }
+
+            var positionOffsetsByName = new Dictionary<string, Vector3>(StringComparer.Ordinal);
+            foreach (KeyValuePair<Transform, Vector3> entry in appliedPositionOffsets)
+            {
+                if (entry.Key != null)
+                {
+                    positionOffsetsByName[entry.Key.name] = entry.Value;
+                }
+            }
+
+            // Skeleton positions are T-pose locals in parent space, the same space as
+            // the joint and side offsets, so edits are applied as deltas and the
+            // Avatar's own T-pose rotations are preserved.
+            // Entries are rebuilt from their public fields rather than copied. Imported
+            // entries carry a hidden parent name, and once the root entry is renamed
+            // below the children would still name the old root and fail the build.
+            // Without it, AvatarBuilder resolves parents from the live hierarchy.
+            SkeletonBone[] source = description.skeleton;
+            var skeleton = new SkeletonBone[source.Length];
+            for (int index = 0; index < skeleton.Length; index++)
+            {
+                skeleton[index] = new SkeletonBone
+                {
+                    name = source[index].name,
+                    position = source[index].position,
+                    rotation = source[index].rotation,
+                    scale = source[index].scale
+                };
+
+                if (skeleton[index].name == null)
+                {
+                    continue;
+                }
+
+                if (bonesByName.TryGetValue(skeleton[index].name, out HumanBodyBones bone) &&
+                    appliedBoneScales.TryGetValue(bone, out float scale))
+                {
+                    skeleton[index].scale *= scale;
+                }
+
+                if (positionOffsetsByName.TryGetValue(skeleton[index].name, out Vector3 offset))
+                {
+                    skeleton[index].position += offset;
+                }
+            }
+
+            // Model import records the root as it was named during import, such as
+            // "sk_f_human(Clone)". The scene instance is usually renamed, so map the
+            // unmatched root entry onto the Animator object.
+            GameObject avatarRoot = activeAnimator.gameObject;
+            if (!string.Equals(skeleton[0].name, avatarRoot.name, StringComparison.Ordinal) &&
+                FindInHierarchy(avatarRoot.transform, skeleton[0].name) == null)
+            {
+                skeleton[0].name = avatarRoot.name;
+            }
+
+            description.skeleton = skeleton;
+            error = null;
+            return true;
+        }
+
+        private static Transform FindInHierarchy(Transform root, string name)
+        {
+            if (string.Equals(root.name, name, StringComparison.Ordinal))
+            {
+                return root;
+            }
+
+            for (int index = 0; index < root.childCount; index++)
+            {
+                Transform match = FindInHierarchy(root.GetChild(index), name);
+                if (match != null)
+                {
+                    return match;
+                }
+            }
+
+            return null;
+        }
+
+        private void AssignAvatar(Avatar avatar)
+        {
+            if (activeAnimator == null || activeAnimator.avatar == avatar)
+            {
+                return;
+            }
+
+            // Changing the Avatar rebinds the Animator, which resets its state machine
+            // and parameters. Carry them across so the preview does not restart.
+            AnimatorStateSnapshot snapshot = AnimatorStateSnapshot.Capture(activeAnimator);
+            activeAnimator.avatar = avatar;
+            activeAnimator.Rebind();
+
+            // Proportions are no longer reapplied every frame, so restore them
+            // explicitly in case the rebind reset any bone the driver edits.
+            ApplyNow();
+            snapshot.Restore(activeAnimator);
+        }
+
+        private void RestoreSourceAvatar()
+        {
+            if (activeAnimator != null && sourceAvatar != null)
+            {
+                AssignAvatar(sourceAvatar);
+            }
+
+            DestroyRuntimeAvatar();
+            sourceAvatar = null;
+            avatarDirty = false;
+            avatarMatchesSkeleton = false;
+        }
+
+        private void DestroyRuntimeAvatar()
+        {
+            DestroyAvatar(runtimeAvatar);
+            runtimeAvatar = null;
+        }
+
+        private static void DestroyAvatar(Avatar avatar)
+        {
+            if (avatar == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(avatar);
+            }
+            else
+            {
+                DestroyImmediate(avatar);
             }
         }
 
@@ -323,6 +720,8 @@ namespace Sol.CharacterCustomization
         private void CaptureBindPose()
         {
             bindPose.Clear();
+            appliedBoneScales.Clear();
+            appliedPositionOffsets.Clear();
             Array.Clear(footTransforms, 0, footTransforms.Length);
             hasAnkleHeight = false;
             ankleHeight = 0f;
@@ -424,8 +823,8 @@ namespace Sol.CharacterCustomization
                 footGrounded[index] = false;
                 footIkPositions[index] = Vector3.zero;
                 footIkNormals[index] = Vector3.up;
-                footIkRotations[index] = activeRoot != null ? activeRoot.rotation : Quaternion.identity;
-                lastFootRotations[index] = Quaternion.identity;
+                footSlopeRotations[index] = Quaternion.identity;
+                lastFootSlopeRotations[index] = Quaternion.identity;
                 hasLastFootRotation[index] = false;
                 lastFootHeights[index] = 0f;
                 groundingProbeStates[index].Clear();
@@ -531,6 +930,7 @@ namespace Sol.CharacterCustomization
             if (bindPose.TryGetValue(bone, out BonePose pose))
             {
                 pose.Transform.localScale = pose.LocalScale * scale;
+                appliedBoneScales[bone] = scale;
             }
         }
 
@@ -551,9 +951,16 @@ namespace Sol.CharacterCustomization
                 ? Mathf.Sign(pose.LocalPosition.x)
                 : fallbackSign;
             float baseDistance = Mathf.Max(Mathf.Abs(pose.LocalPosition.x), 0.03f);
-            Vector3 position = pose.LocalPosition;
-            position.x += side * baseDistance * WidthOffsetRange * value;
-            pose.Transform.localPosition = position;
+            var delta = new Vector3(side * baseDistance * WidthOffsetRange * value, 0f, 0f);
+            if (delta.x == 0f)
+            {
+                return;
+            }
+
+            // Added on top of any joint offset already applied to this bone.
+            pose.Transform.localPosition += delta;
+            appliedPositionOffsets.TryGetValue(pose.Transform, out Vector3 existing);
+            appliedPositionOffsets[pose.Transform] = existing + delta;
         }
 
         private float GetChannelValue(CharacterRigProportionChannel channel)
@@ -615,13 +1022,15 @@ namespace Sol.CharacterCustomization
                 : Mathf.Lerp(1f, fallbackMaximum, value);
         }
 
-        private void UpdateFootTargets()
+        // Inside OnAnimatorIK the foot transforms still hold last frame's pose, so the
+        // IK path probes from this frame's animated IK goals instead.
+        private void UpdateFootTargets(bool useAnimatorIkGoals)
         {
-            UpdateFootTarget(RightFootIndex, LeftFootIndex);
-            UpdateFootTarget(LeftFootIndex, RightFootIndex);
+            UpdateFootTarget(RightFootIndex, LeftFootIndex, AvatarIKGoal.RightFoot, useAnimatorIkGoals);
+            UpdateFootTarget(LeftFootIndex, RightFootIndex, AvatarIKGoal.LeftFoot, useAnimatorIkGoals);
         }
 
-        private void UpdateFootTarget(int index, int oppositeIndex)
+        private void UpdateFootTarget(int index, int oppositeIndex, AvatarIKGoal goal, bool useAnimatorIkGoal)
         {
             if (activeRoot == null || footTransforms[index] == null)
             {
@@ -635,7 +1044,9 @@ namespace Sol.CharacterCustomization
                 : Mathf.Min(footProbeHeight, minFootProbeHeight);
             stepHeight = Mathf.Max(stepHeight, 0.01f);
 
-            Vector3 footPosition = footTransforms[index].position;
+            Vector3 footPosition = useAnimatorIkGoal && activeAnimator != null
+                ? activeAnimator.GetIKPosition(goal)
+                : footTransforms[index].position;
             Vector3 origin = new(footPosition.x, activeRoot.position.y + stepHeight, footPosition.z);
             float distance = stepHeight * 2f;
             float probeRadius = ResolveFootProbeRadius();
@@ -653,7 +1064,7 @@ namespace Sol.CharacterCustomization
                     footGrounded[index] = true;
                     footIkPositions[index] = hit.point;
                     footIkNormals[index] = hit.normal;
-                    footIkRotations[index] = Quaternion.FromToRotation(Vector3.up, hit.normal) * activeRoot.rotation;
+                    footSlopeRotations[index] = Quaternion.FromToRotation(Vector3.up, hit.normal);
                     groundingProbeStates[index].RecordHit(hit.point, hit.normal, footIkPositions[index]);
                     return;
                 }
@@ -662,7 +1073,7 @@ namespace Sol.CharacterCustomization
             footGrounded[index] = false;
             footIkPositions[index] = origin + Vector3.down * distance;
             footIkNormals[index] = Vector3.up;
-            footIkRotations[index] = activeRoot.rotation;
+            footSlopeRotations[index] = Quaternion.identity;
             groundingProbeStates[index].RecordMiss(footIkPositions[index]);
         }
 
@@ -681,9 +1092,13 @@ namespace Sol.CharacterCustomization
             float feetScale = EvaluateScale(CharacterRigProportionChannel.Feet, 0.5f, 1.5f);
             float lowerLegScale = 1f / legsScale / legsScale;
             float resolvedFeetScale = 1f / lowerLegScale / legsScale * feetScale;
-            float legOffset = legsScale > 1f
-                ? Mathf.InverseLerp(0f, 1.2f, legsScale) * -0.01f
-                : Mathf.InverseLerp(1f, 0.8f, legsScale) * 0.03f;
+            // A rebuilt Avatar already carries the new leg length into the animated
+            // hip height, so the leg heuristic only covers a stale or disabled rebuild.
+            float legOffset = avatarMatchesSkeleton
+                ? 0f
+                : legsScale > 1f
+                    ? Mathf.InverseLerp(0f, 1.2f, legsScale) * -0.01f
+                    : Mathf.InverseLerp(1f, 0.8f, legsScale) * 0.03f;
 
             float feetOffset = hasAnkleHeight ? (ankleHeight * resolvedFeetScale) - ankleHeight : 0f;
             float rootScale = activeRoot != null ? activeRoot.localScale.y : 1f;
@@ -724,7 +1139,7 @@ namespace Sol.CharacterCustomization
         private void ApplyFootIk(AvatarIKGoal goal, int index)
         {
             Vector3 targetPosition = activeAnimator.GetIKPosition(goal);
-            Quaternion targetRotation = footIkRotations[index];
+            Quaternion targetSlope = footSlopeRotations[index];
             Vector3 localTargetPosition = activeRoot.InverseTransformPoint(targetPosition);
             Vector3 localIkPosition = activeRoot.InverseTransformPoint(footIkPositions[index]);
 
@@ -736,23 +1151,26 @@ namespace Sol.CharacterCustomization
             targetPosition = activeRoot.TransformPoint(localTargetPosition);
             targetPosition += footIkNormals[index] * morphGroundOffset;
 
+            // Only the terrain slope is smoothed; the animated foot rotation is layered
+            // on top each frame so heel lift and toe-off survive full IK weight.
             if (!hasLastFootRotation[index])
             {
-                lastFootRotations[index] = targetRotation;
+                lastFootSlopeRotations[index] = targetSlope;
                 hasLastFootRotation[index] = true;
             }
             else
             {
-                lastFootRotations[index] = Quaternion.RotateTowards(
-                    lastFootRotations[index],
-                    targetRotation,
+                lastFootSlopeRotations[index] = Quaternion.RotateTowards(
+                    lastFootSlopeRotations[index],
+                    targetSlope,
                     footRotationSpeed * Time.deltaTime);
             }
 
+            Quaternion targetRotation = lastFootSlopeRotations[index] * activeAnimator.GetIKRotation(goal);
             float weight = Mathf.Clamp01(groundingWeight);
             activeAnimator.SetIKPosition(goal, targetPosition);
             activeAnimator.SetIKPositionWeight(goal, weight);
-            activeAnimator.SetIKRotation(goal, lastFootRotations[index]);
+            activeAnimator.SetIKRotation(goal, targetRotation);
             activeAnimator.SetIKRotationWeight(goal, weight);
         }
 

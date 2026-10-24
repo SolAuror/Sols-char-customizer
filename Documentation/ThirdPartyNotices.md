@@ -36,3 +36,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Monk Skin Tone Scale
+
+- Project: Monk Skin Tone (MST) Scale
+- Author: Dr. Ellis Monk, released by Google
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Usage in CharacterEditor: the ten MST swatch colours are calibration targets for the constants in `Assets/CharCustomization/Scripts/Core/SkinColorModel.cs` and are listed in `Assets/CharCustomization/Scripts/Editor/SkinColorModelEditModeTests.cs`. No MST images or other materials are included.
+- Source: https://skintone.google

@@ -23,7 +23,9 @@ namespace Sol.CharacterCustomization
     [Serializable]
     public sealed class CharacterRecipe
     {
-        public const int CurrentVersion = 2;
+        // Version 3 adds skin colour parameters. Older recipes have none, and the
+        // character profile derives them from the tone or custom colour on apply.
+        public const int CurrentVersion = 3;
         public const string DefaultSkinToneId = "fair";
         public const string DefaultEyeMaterialId = "brown";
 
@@ -32,6 +34,8 @@ namespace Sol.CharacterCustomization
         [SerializeField] private string skinToneId = DefaultSkinToneId;
         [SerializeField] private bool usesCustomSkinColor;
         [SerializeField] private Color customSkinColor = Color.white;
+        [SerializeField] private bool hasSkinParameters;
+        [SerializeField] private CharacterSkinParameters skinParameters = CharacterSkinParameters.Default;
         [SerializeField] private string eyeMaterialId = DefaultEyeMaterialId;
         [SerializeField] private List<CharacterMorphValue> morphValues = new();
 
@@ -40,6 +44,8 @@ namespace Sol.CharacterCustomization
         public string SkinToneId => skinToneId;
         public bool UsesCustomSkinColor => usesCustomSkinColor;
         public Color CustomSkinColor => customSkinColor;
+        public bool HasSkinParameters => hasSkinParameters;
+        public CharacterSkinParameters SkinParameters => skinParameters;
         public string EyeMaterialId => string.IsNullOrWhiteSpace(eyeMaterialId)
             ? DefaultEyeMaterialId
             : eyeMaterialId;
@@ -112,6 +118,8 @@ namespace Sol.CharacterCustomization
             eyeMaterialId = string.IsNullOrWhiteSpace(recipeEyeMaterialId)
                 ? DefaultEyeMaterialId
                 : recipeEyeMaterialId.Trim();
+            hasSkinParameters = false;
+            skinParameters = CharacterSkinParameters.Default;
             morphValues ??= new List<CharacterMorphValue>();
             morphValues.Clear();
 
@@ -147,6 +155,16 @@ namespace Sol.CharacterCustomization
                 source.CustomSkinColor,
                 source.EyeMaterialId,
                 source.MorphValues);
+            if (source.HasSkinParameters)
+            {
+                SetSkinParameters(source.SkinParameters);
+            }
+        }
+
+        public void SetSkinParameters(CharacterSkinParameters parameters)
+        {
+            hasSkinParameters = true;
+            skinParameters = new CharacterSkinParameters(parameters.Melanin, parameters.Hemoglobin, parameters.Undertone);
         }
 
         public bool HasValidIdentifiers(out string error)

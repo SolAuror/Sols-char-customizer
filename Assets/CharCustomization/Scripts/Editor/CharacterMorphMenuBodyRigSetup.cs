@@ -9,7 +9,7 @@ namespace Sol.CharacterCustomization.EditorTools
 {
     public static class CharacterMorphMenuBodyRigSetup
     {
-        private const string MenuPrefabPath = "Assets/CharCustomization/Prefabs/CharacterMorphMenuDemoUI.prefab";
+        private const string MenuPrefabPath = "Assets/CharCustomization/Resources/Prefabs/CharacterMorphMenuDemoUI.prefab";
         private const string DeprecatedBodyRigGroupId = "Body Rig";
 
         [MenuItem("Tools/Sol/Character Customization/Ensure Consolidated Body Menu Controls")]

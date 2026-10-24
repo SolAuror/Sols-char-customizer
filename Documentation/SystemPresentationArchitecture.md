@@ -158,16 +158,18 @@ SET STAT GROWTH(stat ID, normalized value)
     find the stat-growth definition
     clamp the incoming host-game value between zero and one
     map it to the definition's morph output range
-    send the mapped value and stable morph ID through SET MORPH
+    store the mapped value as an offset in the stat's gameplay layer
+    reapply the morph as base recipe value plus every layer offset, clamped to its range
+    leave the creator recipe and saved appearance unchanged
 
 MUSCLE
-    zero stat maps to zero muscle
-    full stat maps to full muscle
+    zero stat adds no muscle
+    full stat adds full muscle
 
 BODY FAT
-    zero stat maps to the slim weight shape
-    half stat maps to neutral weight
-    full stat maps to the heavy weight shape
+    zero stat shifts weight fully toward slim
+    half stat leaves the creator weight unchanged
+    full stat shifts weight fully toward heavy
 ```
 
 ### Save, load, or finalize a recipe

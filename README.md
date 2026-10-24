@@ -29,7 +29,13 @@ The public system talks in stable IDs such as `body.weight`, `body.muscle`, and 
 - Separated blendshape and skeletal-proportion driver paths.
 - Body tab consolidation for BodyMorphLite-style local-bone proportion sliders.
 - Optional foot grounding and Animator IK bridge for proportion-aware animation.
+- Humanoid Avatar rebuilt from the morphed skeleton so retargeting and IK match edited limb lengths.
+- Twist bone driver for unmapped Auto-Rig Pro twist bones, removing wrist and ankle candy-wrapping.
+- Joint offsets from Blender sidecars: joints follow mesh shapes, so height, shoulder width, and hips can use the authored shapes instead of bone scaling.
+- NPC baking: body blendshapes folded into shared, reference-counted meshes, with an option to drop the unused sex's rig.
 - Skin swatches and custom skin colour support.
+- Skin picker UI: melanin by hemoglobin colour plane plus melanin, hemoglobin, and undertone sliders, replacing HSV.
+- `Sol/Character Skin` URP shader: melanin, hemoglobin, and undertone colour model fitted to the Monk Skin Tone Scale, region masks, wrapped-diffuse scattering, dual-lobe specular, and transmission.
 - Authored Unity UI prefab with tabbed morph groups.
 - Runtime preset save/load through JSON.
 - Named player finalization through JSON.
@@ -122,7 +128,7 @@ finalization.SetPlayerSaveRepository(customPlayerRepository);
 finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
 ```
 
-Gameplay stats can also drive morphs without owning the customization UI:
+Gameplay stats can also drive morphs without owning the customization UI. Stat growth is applied as an additive gameplay layer, so the player's creator choices and saved recipe stay intact:
 
 ```csharp
 controller.SetStatGrowth("muscle", normalizedStrength);
@@ -180,3 +186,15 @@ Not included yet:
 ## Status
 
 The system is presentation-ready and now has the core BodyMorphLite-style rig backend merged in a CharacterEditor-safe way. Remaining work is focused on Unity Play Mode validation, package boundary cleanup, demo asset separation, licensing audit, and broader automated test coverage.
+
+## License
+
+Source-available under the [Business Source License 1.1](LICENSE.md). In short:
+
+- Free to read, modify, learn from, and use in non-production work.
+- Free to ship in your own games and apps, including commercial ones, if your team's revenue and funding is under US$100,000 a year and you credit Sol Auror somewhere in your product.
+- Not allowed to be resold or redistributed as a character creator, asset, plugin, SDK, or other middleware.
+- Larger teams need a commercial license.
+- Each version converts to the Apache License 2.0 two years after its release.
+
+The full terms in [LICENSE.md](LICENSE.md) take precedence over this summary. Third-party notices are listed in [Documentation/ThirdPartyNotices.md](Documentation/ThirdPartyNotices.md).

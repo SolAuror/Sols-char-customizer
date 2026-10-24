@@ -52,6 +52,9 @@ MonoBehaviour:
   activeSex: 0
   catalogAsset: {fileID: 11400000, guid: 04384cd30eebd474e9fdccdb44345a53, type: 2}
   rigProportionDriver: {fileID: 667402211724877441}
+  ensureTwistBoneDrivers: 1
+  femaleJointOffsets: {fileID: 9130569162354995766, guid: ab53b777458b44448dc2baed1bf56d22, type: 3}
+  maleJointOffsets: {fileID: 9130569162354995766, guid: 2e9d0ac5b46a4281bd9a84525f946ede, type: 3}
 --- !u!114 &667402211724877441
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -65,22 +68,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterRigProportionDriver
   proportionProfile: {fileID: 11400000, guid: b42d67d50fec06c4a950ca4a59afda6a, type: 2}
+  useInspectorBmlControls: 0
+  heightInput: 0.01
+  upperBodyInput: 0.02
+  lowerBodyInput: 0
+  headInput: 0
+  neckInput: 0
+  waistInput: 0
+  chestInput: 0
+  spineInput: 0
+  shouldersInput: 0
+  upperArmsInput: 0
+  lowerArmsInput: 0
+  handsInput: 0
+  fingersInput: 0
+  legsInput: 0
+  feetInput: 0
+  footRadiusInput: 0
+  shoulderWidthInput: 0
+  hipsWidthInput: 0
   enableFootIkGrounding: 1
   footProbeRadius: 0.05
   footProbeHeight: 0.35
   minFootProbeHeight: 0.18
-  pelvisOffsetSpeed: 4
-  footIkAdaptSpeed: 6
+  pelvisOffsetSpeed: 6
+  footIkAdaptSpeed: 8
   pelvisIkWeight: 0.75
-  footRotationSpeed: 90
-  morphGroundOffsetScale: 0
-  minHeightFootContactOffset: -0.015
-  maxHeightFootContactOffset: 0.005
+  footRotationSpeed: 720
   groundingLayers:
     serializedVersion: 2
     m_Bits: 1
   warnWhenIkBridgeMissing: 1
-  enableGroundingDebugDraw: 1
+  reapplyPoseEveryFrame: 0
+  rebuildAvatarOnSkeletalChange: 1
+  avatarRebuildDelay: 0.25
+  enableGroundingDebugDraw: 0
   probePathColor: {r: 0.25, g: 0.6, b: 1, a: 1}
   hitPointColor: {r: 0.2, g: 1, b: 0.35, a: 1}
   missColor: {r: 1, g: 0.35, b: 0.25, a: 1}
@@ -126,7 +148,10 @@ MonoBehaviour:
   controller: {fileID: 5533027457802694159}
   authoredPreset: {fileID: 0}
   applyOnAwake: 0
+  bakeOnStart: 0
+  releaseInactiveSexOnBake: 1
   skinPalette: {fileID: 11400000, guid: 5d0582a508e31904eb23828d9d3da4cb, type: 2}
+  skinProfile: {fileID: 11400000, guid: 755a5e2770924a84288dd75a36962f48, type: 2}
   skinColorPropertyNames:
   - _BaseColor
   - _Color
@@ -134,11 +159,14 @@ MonoBehaviour:
   - _Smoothness
   - _Glossiness
   invertRoughnessForSmoothness: 1
+  instanceSkinMaterials: 1
   skinRoughness: 0.5
   femaleSkinRenderers:
   - {fileID: 0}
   maleSkinRenderers:
   - {fileID: 0}
   eyePalette: {fileID: 11400000, guid: c9ef91db28a14463a8db41c707e47824, type: 2}
-  femaleEyeRenderers: []
-  maleEyeRenderers: []
+  femaleEyeRenderers:
+  - {fileID: 0}
+  maleEyeRenderers:
+  - {fileID: 0}

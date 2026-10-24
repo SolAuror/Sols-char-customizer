@@ -163,6 +163,7 @@ namespace Sol.CharacterCustomization
             }
 
             ClearOverwriteConfirmation();
+            FlushPendingAvatarRebuild();
             Finalized?.Invoke(record);
 
             if (!HasCompleteHandoff(out string handoffError))
@@ -254,6 +255,18 @@ namespace Sol.CharacterCustomization
             }
 
             return true;
+        }
+
+        // Listeners and the gameplay handoff should see an Avatar that matches the
+        // finalized proportions instead of waiting out the rebuild delay.
+        private void FlushPendingAvatarRebuild()
+        {
+            CharacterMorphController controller = profile.Controller;
+            CharacterRigProportionDriver rigDriver = controller != null ? controller.RigProportionDriver : null;
+            if (rigDriver != null && rigDriver.IsAvatarRebuildPending)
+            {
+                rigDriver.RebuildAvatarNow();
+            }
         }
 
         private bool TryPrepareGameplayController(out string error)

@@ -6,14 +6,42 @@ namespace Sol.CharacterCustomization
 {
     public sealed class CharacterMorphController : MonoBehaviour
     {
+        public const string StatGrowthLayerPrefix = "stat.";
+
         [SerializeField] private GameObject femaleRoot;
         [SerializeField] private GameObject maleRoot;
         [SerializeField] private CharacterSex activeSex = CharacterCustomizationUiConfig.DefaultSex;
         [SerializeField] private CharacterMorphCatalogAsset catalogAsset;
         [SerializeField] private CharacterRigProportionDriver rigProportionDriver;
+        [Tooltip("Adds a CharacterTwistBoneDriver to each character Animator in Play Mode, so exported twist bones follow the limbs.")]
+        [SerializeField] private bool ensureTwistBoneDrivers = true;
+
+        [Header("Joint Offsets")]
+        [Tooltip("Joint offsets exported from Blender (.solrig) for the female character. With one, joints follow the reshaped mesh, and skeletal morphs that also exist as mesh shapes use the shapes.")]
+        [SerializeField] private CharacterJointOffsetTable femaleJointOffsets;
+        [Tooltip("Joint offsets exported from Blender (.solrig) for the male character.")]
+        [SerializeField] private CharacterJointOffsetTable maleJointOffsets;
 
         private readonly Dictionary<CharacterSex, Dictionary<string, float>> recipes = new();
         private readonly Dictionary<CharacterSex, Dictionary<string, MorphBinding>> bindings = new();
+
+        // Complete blendshape bindings for skeletal morphs whose shapes also exist on
+        // the mesh, used instead of bone scaling when that sex has joint offsets.
+        private readonly Dictionary<CharacterSex, Dictionary<string, MorphBinding>> meshShapeBindings = new();
+
+        // Gameplay offsets keyed by layer ID, then morph ID. Layers sit on top of
+        // the creator recipe and are never captured into it, so progression,
+        // ageing, or injury can reshape the body without erasing the player's
+        // authored appearance.
+        private readonly Dictionary<string, Dictionary<string, float>> morphLayers = new(StringComparer.Ordinal);
+
+        // Baked renderers show a mesh copy with the creator blendshapes folded in.
+        // While baked, blendshape morph edits update the recipe only; rebaking
+        // refreshes the meshes.
+        private readonly List<BakedRenderer> bakedRenderers = new();
+        private readonly Dictionary<string, float> bakedFoldWeights = new(StringComparer.Ordinal);
+        private readonly HashSet<CharacterSex> releasedSexes = new();
+        private CharacterSex bakedSex;
         private bool initialized;
 
         public CharacterSex ActiveSex => activeSex;
@@ -29,6 +57,9 @@ namespace Sol.CharacterCustomization
             ? catalogAsset.Definitions
             : CharacterMorphCatalog.Definitions;
         public IReadOnlyList<StatGrowthDefinition> StatGrowthDefinitions => CharacterStatGrowthCatalog.Definitions;
+        public bool EnsuresTwistBoneDrivers => ensureTwistBoneDrivers;
+        public bool IsBaked => bakedRenderers.Count > 0;
+        public bool IsBakeStale => IsBaked && !FoldWeightsMatch(BuildFoldWeights(bakedSex), bakedFoldWeights);
 
         private void Awake()
         {
@@ -39,6 +70,17 @@ namespace Sol.CharacterCustomization
         public void SetSex(CharacterSex sex)
         {
             Initialize();
+            if (releasedSexes.Contains(sex))
+            {
+                Debug.LogWarning($"The {sex} character root was released and can no longer be shown.", this);
+                return;
+            }
+
+            if (IsBaked && sex != bakedSex)
+            {
+                RestoreBakedMeshes();
+            }
+
             activeSex = sex;
 
             if (femaleRoot != null)
@@ -73,6 +115,87 @@ namespace Sol.CharacterCustomization
         {
             Initialize();
             return recipes[activeSex].TryGetValue(morphId, out float value) ? value : 0f;
+        }
+
+        public float GetEffectiveMorph(string morphId)
+        {
+            Initialize();
+            if (string.IsNullOrWhiteSpace(morphId) ||
+                !TryGetDefinition(morphId, out CharacterMorphDefinition definition))
+            {
+                return 0f;
+            }
+
+            return ResolveEffectiveValue(definition, GetMorph(morphId));
+        }
+
+        public void SetMorphLayerOffset(string layerId, string morphId, float offset)
+        {
+            Initialize();
+            if (string.IsNullOrWhiteSpace(layerId))
+            {
+                Debug.LogWarning("Cannot set a morph offset on an empty layer ID.", this);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(morphId) ||
+                !TryGetDefinition(morphId, out CharacterMorphDefinition definition))
+            {
+                Debug.LogWarning($"Unknown character morph '{morphId}'.", this);
+                return;
+            }
+
+            if (!morphLayers.TryGetValue(layerId, out Dictionary<string, float> layer))
+            {
+                layer = new Dictionary<string, float>(StringComparer.Ordinal);
+                morphLayers.Add(layerId, layer);
+            }
+
+            float range = 1f - definition.MinimumValue;
+            layer[morphId] = Mathf.Clamp(offset, -range, range);
+            ApplyMorph(activeSex, definition, GetMorph(morphId));
+        }
+
+        public bool TryGetMorphLayerOffset(string layerId, string morphId, out float offset)
+        {
+            offset = 0f;
+            return !string.IsNullOrWhiteSpace(layerId) &&
+                   !string.IsNullOrWhiteSpace(morphId) &&
+                   morphLayers.TryGetValue(layerId, out Dictionary<string, float> layer) &&
+                   layer.TryGetValue(morphId, out offset);
+        }
+
+        public bool ClearMorphLayer(string layerId)
+        {
+            Initialize();
+            if (string.IsNullOrWhiteSpace(layerId) ||
+                !morphLayers.TryGetValue(layerId, out Dictionary<string, float> layer))
+            {
+                return false;
+            }
+
+            morphLayers.Remove(layerId);
+            foreach (string morphId in layer.Keys)
+            {
+                if (TryGetDefinition(morphId, out CharacterMorphDefinition definition))
+                {
+                    ApplyMorph(activeSex, definition, GetMorph(morphId));
+                }
+            }
+
+            return true;
+        }
+
+        public void ClearAllMorphLayers()
+        {
+            Initialize();
+            if (morphLayers.Count == 0)
+            {
+                return;
+            }
+
+            morphLayers.Clear();
+            ApplyRecipe(activeSex);
         }
 
         public bool TryGetDefinition(string morphId, out CharacterMorphDefinition definition)
@@ -163,7 +286,126 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
-            SetMorph(growthDefinition.MorphId, growthDefinition.Evaluate(normalizedValue));
+            SetMorphLayerOffset(
+                GetStatGrowthLayerId(growthDefinition.Id),
+                growthDefinition.MorphId,
+                growthDefinition.Evaluate(normalizedValue));
+        }
+
+        public bool ClearStatGrowth(string statId)
+        {
+            return !string.IsNullOrWhiteSpace(statId) && ClearMorphLayer(GetStatGrowthLayerId(statId));
+        }
+
+        public static string GetStatGrowthLayerId(string statId)
+        {
+            return StatGrowthLayerPrefix + statId;
+        }
+
+        public bool BakeActiveCharacter(out string error)
+        {
+            Initialize();
+            Transform root = ActiveCharacterRoot;
+            if (root == null)
+            {
+                error = $"No {activeSex} character root is assigned, so there is nothing to bake.";
+                return false;
+            }
+
+            // Rebaking always starts from the source meshes.
+            RestoreBakedMeshes();
+            if (rigProportionDriver != null && rigProportionDriver.IsAvatarRebuildPending)
+            {
+                rigProportionDriver.RebuildAvatarNow();
+            }
+
+            Dictionary<string, float> foldWeights = BuildFoldWeights(activeSex);
+            var baked = new List<BakedRenderer>();
+            foreach (SkinnedMeshRenderer renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                Mesh source = renderer.sharedMesh;
+                if (!CharacterMeshBaker.UsesAnyShape(source, foldWeights))
+                {
+                    continue;
+                }
+
+                if (!CharacterMeshBaker.TryAcquireShared(source, foldWeights, out Mesh bakedMesh, out error))
+                {
+                    RestoreRenderers(baked);
+                    ApplyRecipe(activeSex);
+                    return false;
+                }
+
+                Dictionary<string, float> keptWeights = CaptureWeightsByName(renderer);
+                renderer.sharedMesh = bakedMesh;
+                ApplyWeightsByName(renderer, keptWeights);
+
+                CharacterBakedMeshHandle handle = renderer.GetComponent<CharacterBakedMeshHandle>();
+                if (handle == null)
+                {
+                    handle = renderer.gameObject.AddComponent<CharacterBakedMeshHandle>();
+                }
+
+                handle.Track(bakedMesh);
+                baked.Add(new BakedRenderer(renderer, source, handle));
+            }
+
+            if (baked.Count == 0)
+            {
+                error = $"No skinned renderer under '{root.name}' uses catalog blendshapes.";
+                return false;
+            }
+
+            bakedRenderers.AddRange(baked);
+            bakedSex = activeSex;
+            foreach (KeyValuePair<string, float> entry in foldWeights)
+            {
+                bakedFoldWeights[entry.Key] = entry.Value;
+            }
+
+            RebindActiveAnimator();
+            error = null;
+            return true;
+        }
+
+        public void UnbakeActiveCharacter()
+        {
+            RestoreBakedMeshes();
+        }
+
+        // Destroys the hidden sex's character root so a finished NPC carries one rig.
+        public bool ReleaseInactiveSexRoot()
+        {
+            Initialize();
+            CharacterSex inactiveSex = activeSex == CharacterSex.Female ? CharacterSex.Male : CharacterSex.Female;
+            GameObject inactiveRoot = inactiveSex == CharacterSex.Female ? femaleRoot : maleRoot;
+            if (inactiveRoot == null)
+            {
+                return false;
+            }
+
+            if (inactiveSex == CharacterSex.Female)
+            {
+                femaleRoot = null;
+            }
+            else
+            {
+                maleRoot = null;
+            }
+
+            bindings[inactiveSex].Clear();
+            meshShapeBindings[inactiveSex].Clear();
+            releasedSexes.Add(inactiveSex);
+            if (Application.isPlaying)
+            {
+                Destroy(inactiveRoot);
+            }
+            else
+            {
+                DestroyImmediate(inactiveRoot);
+            }
+
+            return true;
         }
 
         public void ResetCurrentCharacter()
@@ -216,6 +458,11 @@ namespace Sol.CharacterCustomization
                 return false;
             }
 
+            if (TryGetMeshShapeBinding(activeSex, definition, out _))
+            {
+                return true;
+            }
+
             if (definition.IsSkeletalDriven)
             {
                 return rigProportionDriver != null && rigProportionDriver.CanApply;
@@ -245,12 +492,12 @@ namespace Sol.CharacterCustomization
                 errors.Add(catalogError);
             }
 
-            if (femaleRoot == null)
+            if (femaleRoot == null && !releasedSexes.Contains(CharacterSex.Female))
             {
                 errors.Add("No female character root is assigned.");
             }
 
-            if (maleRoot == null)
+            if (maleRoot == null && !releasedSexes.Contains(CharacterSex.Male))
             {
                 errors.Add("No male character root is assigned.");
             }
@@ -275,11 +522,21 @@ namespace Sol.CharacterCustomization
             initialized = true;
             EnsureRecipe(CharacterSex.Female);
             EnsureRecipe(CharacterSex.Male);
-            bindings[CharacterSex.Female] = BuildBindings(femaleRoot, CharacterSex.Female, Definitions);
-            bindings[CharacterSex.Male] = BuildBindings(maleRoot, CharacterSex.Male, Definitions);
+            bindings[CharacterSex.Female] = BuildBindings(
+                femaleRoot, CharacterSex.Female, Definitions, out Dictionary<string, MorphBinding> femaleMeshShapes);
+            bindings[CharacterSex.Male] = BuildBindings(
+                maleRoot, CharacterSex.Male, Definitions, out Dictionary<string, MorphBinding> maleMeshShapes);
+            meshShapeBindings[CharacterSex.Female] = femaleMeshShapes;
+            meshShapeBindings[CharacterSex.Male] = maleMeshShapes;
             if (rigProportionDriver == null)
             {
                 rigProportionDriver = GetComponent<CharacterRigProportionDriver>();
+            }
+
+            if (ensureTwistBoneDrivers && Application.isPlaying)
+            {
+                EnsureTwistBoneDriver(femaleRoot);
+                EnsureTwistBoneDriver(maleRoot);
             }
 
             ApplyRecipe(CharacterSex.Female);
@@ -303,9 +560,11 @@ namespace Sol.CharacterCustomization
         private static Dictionary<string, MorphBinding> BuildBindings(
             GameObject root,
             CharacterSex sex,
-            IReadOnlyList<CharacterMorphDefinition> definitions)
+            IReadOnlyList<CharacterMorphDefinition> definitions,
+            out Dictionary<string, MorphBinding> meshShapes)
         {
             var result = new Dictionary<string, MorphBinding>(StringComparer.Ordinal);
+            meshShapes = new Dictionary<string, MorphBinding>(StringComparer.Ordinal);
             if (root == null)
             {
                 Debug.LogWarning($"No {sex} character root is assigned to the morph controller.");
@@ -318,38 +577,21 @@ namespace Sol.CharacterCustomization
                 if (definition.IsSkeletalDriven)
                 {
                     result.Add(definition.Id, MorphBinding.Skeletal);
+                    MorphBinding meshShape = BuildBlendShapeBinding(renderers, definition, sex);
+                    if (meshShape.IsComplete)
+                    {
+                        meshShapes.Add(definition.Id, meshShape);
+                    }
+
                     continue;
                 }
 
-                string positiveName = definition.GetPositiveShape(sex);
-                string negativeName = definition.GetNegativeShape(sex);
-                var binding = new MorphBinding(definition.RequiresNegativeShape);
-
-                foreach (SkinnedMeshRenderer renderer in renderers)
-                {
-                    Mesh mesh = renderer.sharedMesh;
-                    if (mesh == null)
-                    {
-                        continue;
-                    }
-
-                    int positiveIndex = mesh.GetBlendShapeIndex(positiveName);
-                    int negativeIndex = string.IsNullOrEmpty(negativeName)
-                        ? -1
-                        : mesh.GetBlendShapeIndex(negativeName);
-
-                    if (positiveIndex >= 0 || negativeIndex >= 0)
-                    {
-                        binding.Targets.Add(new BlendShapeTarget(renderer, positiveIndex, negativeIndex));
-                    }
-
-                    binding.HasPositive |= positiveIndex >= 0;
-                    binding.HasNegative |= negativeIndex >= 0;
-                }
-
+                MorphBinding binding = BuildBlendShapeBinding(renderers, definition, sex);
                 result.Add(definition.Id, binding);
                 if (definition.VisibleInCreator && !binding.IsComplete)
                 {
+                    string positiveName = definition.GetPositiveShape(sex);
+                    string negativeName = definition.GetNegativeShape(sex);
                     string expected = definition.RequiresNegativeShape
                         ? $"'{negativeName}' and '{positiveName}'"
                         : $"'{positiveName}'";
@@ -358,6 +600,40 @@ namespace Sol.CharacterCustomization
             }
 
             return result;
+        }
+
+        private static MorphBinding BuildBlendShapeBinding(
+            SkinnedMeshRenderer[] renderers,
+            CharacterMorphDefinition definition,
+            CharacterSex sex)
+        {
+            string positiveName = definition.GetPositiveShape(sex);
+            string negativeName = definition.GetNegativeShape(sex);
+            var binding = new MorphBinding(definition.RequiresNegativeShape);
+
+            foreach (SkinnedMeshRenderer renderer in renderers)
+            {
+                Mesh mesh = renderer.sharedMesh;
+                if (mesh == null)
+                {
+                    continue;
+                }
+
+                int positiveIndex = mesh.GetBlendShapeIndex(positiveName);
+                int negativeIndex = string.IsNullOrEmpty(negativeName)
+                    ? -1
+                    : mesh.GetBlendShapeIndex(negativeName);
+
+                if (positiveIndex >= 0 || negativeIndex >= 0)
+                {
+                    binding.Targets.Add(new BlendShapeTarget(renderer, positiveIndex, negativeIndex));
+                }
+
+                binding.HasPositive |= positiveIndex >= 0;
+                binding.HasNegative |= negativeIndex >= 0;
+            }
+
+            return binding;
         }
 
         private void ApplyRecipe(CharacterSex sex)
@@ -373,22 +649,50 @@ namespace Sol.CharacterCustomization
             }
         }
 
-        private void ApplyMorph(CharacterSex sex, CharacterMorphDefinition definition, float value)
+        private float ResolveEffectiveValue(CharacterMorphDefinition definition, float baseValue)
         {
-            if (definition.IsSkeletalDriven)
+            float value = baseValue;
+            foreach (Dictionary<string, float> layer in morphLayers.Values)
             {
-                if (sex != activeSex)
+                if (layer.TryGetValue(definition.Id, out float offset))
                 {
-                    return;
+                    value += offset;
                 }
+            }
 
+            return Mathf.Clamp(value, definition.MinimumValue, 1f);
+        }
+
+        // Callers pass the creator recipe value; gameplay layers are folded in here
+        // so every apply path (edit, reset, recipe load, sex switch) honours them.
+        private void ApplyMorph(CharacterSex sex, CharacterMorphDefinition definition, float baseValue)
+        {
+            float value = ResolveEffectiveValue(definition, baseValue);
+            bool meshShapeRoute = TryGetMeshShapeBinding(sex, definition, out MorphBinding binding);
+            if (definition.IsSkeletalDriven && sex == activeSex)
+            {
                 BindRigProportionDriver();
-                rigProportionDriver?.SetMorph(definition, value);
+                if (rigProportionDriver != null)
+                {
+                    // With joint offsets the mesh shape carries the change and the
+                    // joints follow it, so the bone-scaling channel stays neutral.
+                    rigProportionDriver.SetMorph(definition, meshShapeRoute ? 0f : value);
+                }
+            }
+
+            if (definition.IsSkeletalDriven && !meshShapeRoute)
+            {
                 return;
             }
 
-            if (!bindings.TryGetValue(sex, out Dictionary<string, MorphBinding> sexBindings) ||
-                !sexBindings.TryGetValue(definition.Id, out MorphBinding binding))
+            if (IsBaked && sex == bakedSex)
+            {
+                return;
+            }
+
+            if (!meshShapeRoute &&
+                (!bindings.TryGetValue(sex, out Dictionary<string, MorphBinding> sexBindings) ||
+                 !sexBindings.TryGetValue(definition.Id, out binding)))
             {
                 return;
             }
@@ -407,6 +711,199 @@ namespace Sol.CharacterCustomization
                     target.Renderer.SetBlendShapeWeight(target.NegativeIndex, negativeWeight);
                 }
             }
+
+            if (sex == activeSex && rigProportionDriver != null)
+            {
+                rigProportionDriver.MarkJointOffsetsDirty();
+            }
+        }
+
+        public bool UsesMeshShapes(string morphId)
+        {
+            Initialize();
+            return TryGetDefinition(morphId, out CharacterMorphDefinition definition) &&
+                   TryGetMeshShapeBinding(activeSex, definition, out _);
+        }
+
+        public CharacterJointOffsetTable GetJointOffsetTable(CharacterSex sex)
+        {
+            return sex == CharacterSex.Female ? femaleJointOffsets : maleJointOffsets;
+        }
+
+        // Skeletal morphs switch to their mesh shapes only when that sex has joint
+        // offsets, since moving the mesh without moving the joints would tear skinning.
+        private bool TryGetMeshShapeBinding(CharacterSex sex, CharacterMorphDefinition definition, out MorphBinding binding)
+        {
+            binding = null;
+            return definition.IsSkeletalDriven &&
+                   GetJointOffsetTable(sex) != null &&
+                   meshShapeBindings.TryGetValue(sex, out Dictionary<string, MorphBinding> sexBindings) &&
+                   sexBindings.TryGetValue(definition.Id, out binding);
+        }
+
+        // The driver initializes in Awake, which runs immediately on an active root and
+        // on first activation otherwise, before that Animator has evaluated.
+        private static void EnsureTwistBoneDriver(GameObject root)
+        {
+            if (root == null)
+            {
+                return;
+            }
+
+            Animator animator = root.GetComponentInChildren<Animator>(true);
+            if (animator == null || animator.GetComponent<CharacterTwistBoneDriver>() != null)
+            {
+                return;
+            }
+
+            // An inactive Animator may not resolve its humanoid bones yet, so inactive
+            // roots get the driver and detect their twist bones once shown.
+            var bindings = new List<TwistBoneBinding>();
+            if (!animator.gameObject.activeInHierarchy ||
+                CharacterTwistBoneDriver.FindHumanoidTwistBones(animator, bindings) > 0)
+            {
+                animator.gameObject.AddComponent<CharacterTwistBoneDriver>();
+            }
+        }
+
+        private void RestoreBakedMeshes()
+        {
+            if (!IsBaked)
+            {
+                return;
+            }
+
+            RestoreRenderers(bakedRenderers);
+            bakedRenderers.Clear();
+            bakedFoldWeights.Clear();
+            ApplyRecipe(bakedSex);
+            RebindActiveAnimator();
+        }
+
+        private static void RestoreRenderers(List<BakedRenderer> states)
+        {
+            foreach (BakedRenderer state in states)
+            {
+                if (state.Renderer != null)
+                {
+                    Dictionary<string, float> keptWeights = CaptureWeightsByName(state.Renderer);
+                    state.Renderer.sharedMesh = state.Source;
+                    ApplyWeightsByName(state.Renderer, keptWeights);
+                }
+
+                if (state.Handle != null)
+                {
+                    state.Handle.Release();
+                }
+            }
+        }
+
+        // Animated blendshape curves bind to mesh shape indices, which change when
+        // meshes are swapped, so the Animator is rebound with its state carried over.
+        private void RebindActiveAnimator()
+        {
+            if (!TryGetActiveAnimator(out Animator animator) || animator.runtimeAnimatorController == null)
+            {
+                return;
+            }
+
+            AnimatorStateSnapshot snapshot = AnimatorStateSnapshot.Capture(animator);
+            animator.Rebind();
+            if (rigProportionDriver != null)
+            {
+                rigProportionDriver.ApplyNow();
+            }
+
+            snapshot.Restore(animator);
+        }
+
+        private Dictionary<string, float> BuildFoldWeights(CharacterSex sex)
+        {
+            var weights = new Dictionary<string, float>(StringComparer.Ordinal);
+            if (!recipes.TryGetValue(sex, out Dictionary<string, float> recipe))
+            {
+                return weights;
+            }
+
+            foreach (CharacterMorphDefinition definition in Definitions)
+            {
+                if (!definition.IsBlendShapeDriven && !TryGetMeshShapeBinding(sex, definition, out _))
+                {
+                    continue;
+                }
+
+                float baseValue = recipe.TryGetValue(definition.Id, out float value) ? value : 0f;
+                definition.CalculateWeights(
+                    ResolveEffectiveValue(definition, baseValue),
+                    out float positiveWeight,
+                    out float negativeWeight);
+                AddFoldWeight(weights, definition.GetPositiveShape(sex), positiveWeight);
+                AddFoldWeight(weights, definition.GetNegativeShape(sex), negativeWeight);
+            }
+
+            return weights;
+        }
+
+        private static void AddFoldWeight(Dictionary<string, float> weights, string shapeName, float weight)
+        {
+            if (string.IsNullOrEmpty(shapeName))
+            {
+                return;
+            }
+
+            weights[shapeName] = weights.TryGetValue(shapeName, out float existing) ? existing + weight : weight;
+        }
+
+        private static bool FoldWeightsMatch(Dictionary<string, float> current, Dictionary<string, float> baked)
+        {
+            if (current.Count != baked.Count)
+            {
+                return false;
+            }
+
+            foreach (KeyValuePair<string, float> entry in current)
+            {
+                if (!baked.TryGetValue(entry.Key, out float bakedWeight) || Mathf.Abs(bakedWeight - entry.Value) > 0.01f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static Dictionary<string, float> CaptureWeightsByName(SkinnedMeshRenderer renderer)
+        {
+            var weights = new Dictionary<string, float>(StringComparer.Ordinal);
+            Mesh mesh = renderer.sharedMesh;
+            if (mesh == null)
+            {
+                return weights;
+            }
+
+            for (int index = 0; index < mesh.blendShapeCount; index++)
+            {
+                weights[mesh.GetBlendShapeName(index)] = renderer.GetBlendShapeWeight(index);
+            }
+
+            return weights;
+        }
+
+        private static void ApplyWeightsByName(SkinnedMeshRenderer renderer, Dictionary<string, float> weights)
+        {
+            Mesh mesh = renderer.sharedMesh;
+            if (mesh == null)
+            {
+                return;
+            }
+
+            for (int index = 0; index < mesh.blendShapeCount; index++)
+            {
+                if (weights.TryGetValue(mesh.GetBlendShapeName(index), out float weight))
+                {
+                    renderer.SetBlendShapeWeight(index, weight);
+                }
+            }
         }
 
         private void BindRigProportionDriver()
@@ -417,7 +914,7 @@ namespace Sol.CharacterCustomization
             }
 
             TryGetActiveAnimator(out Animator animator);
-            rigProportionDriver.Bind(ActiveCharacterRoot, animator);
+            rigProportionDriver.Bind(ActiveCharacterRoot, animator, GetJointOffsetTable(activeSex));
         }
 
         private bool HasAnySkeletalDefinition()
@@ -493,6 +990,20 @@ namespace Sol.CharacterCustomization
             public bool HasPositive;
             public bool HasNegative;
             public bool IsComplete => isSkeletal || HasPositive && (!isBipolar || HasNegative);
+        }
+
+        private readonly struct BakedRenderer
+        {
+            public BakedRenderer(SkinnedMeshRenderer renderer, Mesh source, CharacterBakedMeshHandle handle)
+            {
+                Renderer = renderer;
+                Source = source;
+                Handle = handle;
+            }
+
+            public SkinnedMeshRenderer Renderer { get; }
+            public Mesh Source { get; }
+            public CharacterBakedMeshHandle Handle { get; }
         }
 
         private readonly struct BlendShapeTarget

@@ -1,0 +1,15 @@
+{
+  "allowUnpaired": ["Body_Breast+", "Body_Stat_Muscle+"],
+  "allowUnsuffixed": [],
+  "allowAsymmetric": [],
+  "ignoreProxyShapes": {
+    "eyes": [
+      "Head_Eyes_Open+", "Head_Eyes_Open-",
+      "Head_Eyes_Bags+", "Head_Eyes_Bags-",
+      "Head_Eyebrow_Height+", "Head_Eyebrow_Height-",
+      "Head_Eyebrow_Angle+", "Head_Eyebrow_Angle-"
+    ],
+    "teeth": ["Head_Mouth_Full+", "Head_Mouth_Full-"],
+    "tongue": ["Head_Mouth_Full+", "Head_Mouth_Full-"]
+  }
+}

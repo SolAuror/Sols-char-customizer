@@ -24,10 +24,12 @@ namespace Sol.CharacterCustomization.EditorTools
             controller.ValidateConfiguration(errors);
             ValidateAnimator(controller, errors);
             ValidateRigDriver(controller, errors);
+            ValidateBakeReadiness(controller, errors);
 
             if (errors.Count == 0)
             {
-                Debug.Log($"Character customization setup is valid for '{controller.name}'.", controller);
+                string scope = Application.isPlaying ? string.Empty : " Run again in Play Mode to check the rig driver's binding.";
+                Debug.Log($"Character customization setup is valid for '{controller.name}'.{scope}", controller);
                 return;
             }
 
@@ -94,6 +96,29 @@ namespace Sol.CharacterCustomization.EditorTools
             Debug.Log($"'{animator.name}' already has {nameof(CharacterRigAnimatorIkBridge)}.", bridge);
         }
 
+        [MenuItem("Tools/Sol/Character Customization/Ensure Twist Bone Driver On Selected Animator")]
+        private static void EnsureTwistBoneDriverOnSelectedAnimator()
+        {
+            Animator animator = Selection.activeGameObject != null
+                ? Selection.activeGameObject.GetComponentInChildren<Animator>(true)
+                : null;
+            if (animator == null)
+            {
+                Debug.LogError("Select a character root or Animator before adding the twist bone driver.");
+                return;
+            }
+
+            CharacterTwistBoneDriver driver = animator.GetComponent<CharacterTwistBoneDriver>();
+            if (driver == null)
+            {
+                driver = Undo.AddComponent<CharacterTwistBoneDriver>(animator.gameObject);
+            }
+
+            var bindings = new List<TwistBoneBinding>();
+            int found = CharacterTwistBoneDriver.FindHumanoidTwistBones(animator, bindings);
+            Debug.Log($"'{animator.name}' has {nameof(CharacterTwistBoneDriver)} with {found} detected twist bones.", driver);
+        }
+
         private static CharacterMorphController FindSelectedController()
         {
             GameObject selected = Selection.activeGameObject;
@@ -135,6 +160,14 @@ namespace Sol.CharacterCustomization.EditorTools
                 errors.Add($"Animator '{animator.name}' is missing {nameof(CharacterRigAnimatorIkBridge)}.");
             }
 
+            var twistBones = new List<TwistBoneBinding>();
+            if (CharacterTwistBoneDriver.FindHumanoidTwistBones(animator, twistBones) > 0 &&
+                animator.GetComponent<CharacterTwistBoneDriver>() == null &&
+                !controller.EnsuresTwistBoneDrivers)
+            {
+                errors.Add($"Animator '{animator.name}' has {twistBones.Count} unmapped twist bones but no {nameof(CharacterTwistBoneDriver)}; they will stay at bind pose.");
+            }
+
             if (animator.runtimeAnimatorController is AnimatorController controllerAsset)
             {
                 for (int index = 0; index < controllerAsset.layers.Length; index++)
@@ -149,12 +182,64 @@ namespace Sol.CharacterCustomization.EditorTools
             }
         }
 
+        private static void ValidateBakeReadiness(CharacterMorphController controller, List<string> errors)
+        {
+            Transform root = controller.ActiveCharacterRoot;
+            if (root == null)
+            {
+                return;
+            }
+
+            var catalogShapes = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (CharacterMorphDefinition definition in controller.Definitions)
+            {
+                if (!definition.IsBlendShapeDriven)
+                {
+                    continue;
+                }
+
+                catalogShapes.Add(definition.GetPositiveShape(controller.ActiveSex));
+                string negativeShape = definition.GetNegativeShape(controller.ActiveSex);
+                if (!string.IsNullOrEmpty(negativeShape))
+                {
+                    catalogShapes.Add(negativeShape);
+                }
+            }
+
+            var reported = new HashSet<Mesh>();
+            foreach (SkinnedMeshRenderer renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                Mesh mesh = renderer.sharedMesh;
+                if (mesh == null || mesh.isReadable || !reported.Add(mesh))
+                {
+                    continue;
+                }
+
+                for (int index = 0; index < mesh.blendShapeCount; index++)
+                {
+                    if (catalogShapes.Contains(mesh.GetBlendShapeName(index)))
+                    {
+                        errors.Add($"Mesh '{mesh.name}' needs Read/Write enabled in its import settings for NPC baking.");
+                        break;
+                    }
+                }
+            }
+        }
+
         private static void ValidateRigDriver(CharacterMorphController controller, List<string> errors)
         {
             CharacterRigProportionDriver driver = controller.RigProportionDriver;
             if (driver == null)
             {
                 errors.Add($"The manager is missing {nameof(CharacterRigProportionDriver)}.");
+                return;
+            }
+
+            // The controller binds the driver to the active root in Awake, so in
+            // Edit Mode it is always unbound. ValidateAnimator already covers the
+            // active root's Animator and Avatar.
+            if (!Application.isPlaying)
+            {
                 return;
             }
 

@@ -46,6 +46,8 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Slider valueSlider;
         [SerializeField] private Slider roughnessSlider;
         [SerializeField] private Image customColorPreview;
+        [Tooltip("Melanin, hemoglobin, and undertone picker. When assigned it replaces the HSV sliders.")]
+        [SerializeField] private CharacterSkinParameterPicker skinParameterPicker;
         [SerializeField] private GameObject eyeColorGrid;
         [SerializeField] private CharacterEyeSwatchButton[] eyeSwatches = Array.Empty<CharacterEyeSwatchButton>();
         [SerializeField] private GameObject bodyTypeHeading;
@@ -270,8 +272,8 @@ namespace Sol.CharacterCustomization
 
         public void RefreshSkinPanel()
         {
-            if (profile == null || hueSlider == null || saturationSlider == null ||
-                valueSlider == null || customColorPreview == null)
+            bool hasHsvSliders = hueSlider != null && saturationSlider != null && valueSlider != null;
+            if (profile == null || customColorPreview == null || (skinParameterPicker == null && !hasHsvSliders))
             {
                 return;
             }
@@ -280,11 +282,19 @@ namespace Sol.CharacterCustomization
             RefreshSkinSwatchSelection();
 
             Color color = profile.CurrentSkinColor;
-            Color.RGBToHSV(color, out float hue, out float saturation, out float value);
-            hueSlider.SetValueWithoutNotify(hue);
-            saturationSlider.SetValueWithoutNotify(saturation);
-            valueSlider.SetValueWithoutNotify(value);
-            UpdateCustomColorSliderGradients(hue, saturation, value);
+            if (skinParameterPicker != null)
+            {
+                skinParameterPicker.Refresh();
+            }
+            else
+            {
+                Color.RGBToHSV(color, out float hue, out float saturation, out float value);
+                hueSlider.SetValueWithoutNotify(hue);
+                saturationSlider.SetValueWithoutNotify(saturation);
+                valueSlider.SetValueWithoutNotify(value);
+                UpdateCustomColorSliderGradients(hue, saturation, value);
+            }
+
             if (roughnessSlider != null)
             {
                 ConfigureRoughnessSlider();
@@ -397,9 +407,13 @@ namespace Sol.CharacterCustomization
             AddMissing(errors, addSkinButton == null, "addSkinButton");
             AddMissing(errors, customColorToggleButton == null, "customColorToggleButton");
             AddMissing(errors, customColorPanel == null, "customColorPanel");
-            AddMissing(errors, hueSlider == null, "hueSlider");
-            AddMissing(errors, saturationSlider == null, "saturationSlider");
-            AddMissing(errors, valueSlider == null, "valueSlider");
+            if (skinParameterPicker == null)
+            {
+                AddMissing(errors, hueSlider == null, "hueSlider");
+                AddMissing(errors, saturationSlider == null, "saturationSlider");
+                AddMissing(errors, valueSlider == null, "valueSlider");
+            }
+
             AddMissing(warnings, roughnessSlider == null, "roughnessSlider");
             AddMissing(errors, customColorPreview == null, "customColorPreview");
             ValidateSkinSwatches(errors);
@@ -453,6 +467,10 @@ namespace Sol.CharacterCustomization
             RepairTextGameObject(ref bodyTypeHeading, "Body Type");
             RepairNamedGameObject(ref customColorPanel, "customColorPanel", "Advanced Custom Colour Panel", "Advanced Custom Color Panel");
             RepairEyeSwatches();
+            if (skinParameterPicker == null)
+            {
+                skinParameterPicker = GetComponentInChildren<CharacterSkinParameterPicker>(true);
+            }
 
             if (content == null && mainSliderScrollRect != null && mainSliderScrollRect.content != null)
             {
@@ -1431,9 +1449,20 @@ namespace Sol.CharacterCustomization
             GetPresetNameSource()?.onValueChanged.AddListener(OnPresetNameChanged);
             addSkinButton?.onClick.AddListener(SaveCurrentSkinColor);
             customColorToggleButton?.onClick.AddListener(ToggleCustomColorPanel);
-            hueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
-            saturationSlider?.onValueChanged.AddListener(OnCustomColorChanged);
-            valueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+            if (skinParameterPicker != null)
+            {
+                // The picker may reuse the authored HSV slider objects, so they are
+                // listened to by the picker only.
+                skinParameterPicker.Bind(profile);
+                skinParameterPicker.ParametersChanged += OnSkinParametersChanged;
+            }
+            else
+            {
+                hueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+                saturationSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+                valueSlider?.onValueChanged.AddListener(OnCustomColorChanged);
+            }
+
             roughnessSlider?.onValueChanged.AddListener(OnRoughnessChanged);
 
             foreach (CharacterSkinSwatchButton swatch in EnumerateSkinSwatches())
@@ -1515,9 +1544,17 @@ namespace Sol.CharacterCustomization
             GetPresetNameSource()?.onValueChanged.RemoveListener(OnPresetNameChanged);
             addSkinButton?.onClick.RemoveListener(SaveCurrentSkinColor);
             customColorToggleButton?.onClick.RemoveListener(ToggleCustomColorPanel);
-            hueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
-            saturationSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
-            valueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+            if (skinParameterPicker != null)
+            {
+                skinParameterPicker.ParametersChanged -= OnSkinParametersChanged;
+            }
+            else
+            {
+                hueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+                saturationSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+                valueSlider?.onValueChanged.RemoveListener(OnCustomColorChanged);
+            }
+
             roughnessSlider?.onValueChanged.RemoveListener(OnRoughnessChanged);
 
             foreach (KeyValuePair<CharacterSkinSwatchButton, UnityAction> pair in skinListeners)
@@ -1769,6 +1806,12 @@ namespace Sol.CharacterCustomization
             // The sliders stay authoritative while dragging: an RGB->HSV round
             // trip collapses hue and saturation whenever value or saturation is zero.
             UpdateCustomColorSliderGradients(hue, saturation, value);
+            RefreshSkinSwatchSelection();
+        }
+
+        private void OnSkinParametersChanged(CharacterSkinParameters _)
+        {
+            customColorPreview.color = profile.CurrentSkinColor;
             RefreshSkinSwatchSelection();
         }
 

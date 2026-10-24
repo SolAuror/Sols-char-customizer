@@ -8,7 +8,7 @@ namespace Sol.CharacterCustomization.EditorTools
 {
     public static class DemoPlayerCinemachineSetup
     {
-        private const string DemoPlayerPrefabPath = "Assets/CharCustomization/Prefabs/DemoPlayer.prefab";
+        private const string DemoPlayerPrefabPath = "Assets/CharCustomization/Resources/Prefabs/DemoPlayer.prefab";
         private const string MoveActionPath = "Assets/CharCustomization/Scripts/Input/PlayerMoveActionReference.asset";
         private const string LookActionPath = "Assets/CharCustomization/Scripts/Input/PlayerLookActionReference.asset";
         private const string JumpActionPath = "Assets/CharCustomization/Scripts/Input/PlayerJumpActionReference.asset";
