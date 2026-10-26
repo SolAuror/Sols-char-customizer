@@ -18,6 +18,7 @@ CBUFFER_START(UnityPerMaterial)
     half _Melanin;
     half _Hemoglobin;
     half _Undertone;
+    half _MelaninMax;
 
     half _LipMelaninScale;
     half _LipHemoglobinAdd;
@@ -48,7 +49,6 @@ SAMPLER(sampler_SkinRegionMap);
 TEXTURE2D(_SkinUtilityMap);
 SAMPLER(sampler_SkinUtilityMap);
 
-#define SOL_SKIN_LUT_SLICES 3.0
 
 struct SolSkinSurface
 {
@@ -60,20 +60,61 @@ struct SolSkinSurface
     half perceptualRoughness;
 };
 
-// Matches SkinColorModel.SampleLutLinear: undertone slices side by side, melanin on
-// x and hemoglobin on y, with a half-texel inset so slices never bleed together.
-half3 SampleSkinColor(half melanin, half hemoglobin, half undertone)
+// Matches SkinColorModel.SampleLutLinear: third-parameter slices (undertone, or tint
+// in a fantasy space) side by side, melanin on x and hemoglobin on y, with a
+// half-texel inset so slices never bleed together. The slice count comes from the
+// table's aspect ratio, and slices blend geometrically, which follows absorption.
+half3 SampleSkinColor(half melanin, half hemoglobin, half third)
 {
-    float sliceWidth = 1.0 / SOL_SKIN_LUT_SLICES;
+    float sliceCount = max(2.0, round(_SkinLut_TexelSize.z / _SkinLut_TexelSize.w));
+    float sliceWidth = 1.0 / sliceCount;
     float2 halfTexel = 0.5 * _SkinLut_TexelSize.xy;
     float u = lerp(halfTexel.x, sliceWidth - halfTexel.x, saturate(melanin));
     float v = lerp(halfTexel.y, 1.0 - halfTexel.y, saturate(hemoglobin));
-    float slicePosition = saturate(undertone) * (SOL_SKIN_LUT_SLICES - 1.0);
-    float slice = min(floor(slicePosition), SOL_SKIN_LUT_SLICES - 2.0);
+    float slicePosition = saturate(third) * (sliceCount - 1.0);
+    float slice = min(floor(slicePosition), sliceCount - 2.0);
 
-    half3 lower = SAMPLE_TEXTURE2D_LOD(_SkinLut, sampler_SkinLut, float2(slice * sliceWidth + u, v), 0).rgb;
-    half3 upper = SAMPLE_TEXTURE2D_LOD(_SkinLut, sampler_SkinLut, float2((slice + 1.0) * sliceWidth + u, v), 0).rgb;
-    return lerp(lower, upper, half(slicePosition - slice));
+    float3 lower = SAMPLE_TEXTURE2D_LOD(_SkinLut, sampler_SkinLut, float2(slice * sliceWidth + u, v), 0).rgb;
+    float3 upper = SAMPLE_TEXTURE2D_LOD(_SkinLut, sampler_SkinLut, float2((slice + 1.0) * sliceWidth + u, v), 0).rgb;
+    return half3(exp2(lerp(log2(max(lower, 1e-5)), log2(max(upper, 1e-5)), slicePosition - slice)));
+}
+
+// Mirrors SkinColorModel: melanin concentration at each tenth of the perceptual
+// slider, and the exponent from concentration to optical density.
+static const float SolMelaninBySlider[11] =
+{
+    0.0, 0.0586, 0.1149, 0.1324, 0.2055, 0.2916, 0.4419, 0.5115, 0.5924, 0.722, 1.0
+};
+#define SOL_MELANIN_DENSITY_EXPONENT 2.2298
+
+float SolMelaninConcentration(float slider)
+{
+    float scaled = saturate(slider) * 10.0;
+    int lower = min((int)scaled, 9);
+    return lerp(SolMelaninBySlider[lower], SolMelaninBySlider[lower + 1], scaled - lower);
+}
+
+float SolMelaninSlider(float concentration)
+{
+    concentration = saturate(concentration);
+    int lower = 9;
+    [unroll]
+    for (int index = 8; index >= 0; index--)
+    {
+        lower = concentration <= SolMelaninBySlider[index + 1] ? index : lower;
+    }
+    float span = max(SolMelaninBySlider[lower + 1] - SolMelaninBySlider[lower], 1e-5);
+    return (lower + (concentration - SolMelaninBySlider[lower]) / span) / 10.0;
+}
+
+// Region scales multiply melanin density, not the perceptual slider. The slider
+// is steep at the deep end, so a slider scale turns deep-skin palms nearly white
+// and lips light red; a density scale keeps every region in proportion to the
+// skin around it, as melanin does in real skin.
+float SolScaleMelaninDensity(float slider, float densityScale)
+{
+    float concentrationScale = pow(max(densityScale, 0.0), 1.0 / SOL_MELANIN_DENSITY_EXPONENT);
+    return SolMelaninSlider(SolMelaninConcentration(slider) * concentrationScale);
 }
 
 SolSkinSurface SampleSolSkinSurface(float2 uv)
@@ -88,10 +129,13 @@ SolSkinSurface SampleSolSkinSurface(float2 uv)
 
     // R lips, G palms, soles and nails, B blush zones, A areolae.
     half4 regions = SAMPLE_TEXTURE2D(_SkinRegionMap, sampler_SkinRegionMap, uv);
-    half melanin = _Melanin
-        * lerp(1.0, _LipMelaninScale, regions.r)
+    half densityScale = lerp(1.0, _LipMelaninScale, regions.r)
         * lerp(1.0, _PalmMelaninScale, regions.g)
         * lerp(1.0, _AreolaMelaninScale, regions.a);
+    // The table's melanin axis spans 0.._MelaninMax of human melanin (fantasy spaces
+    // stop short of the deepest), so density scaling works on that human value.
+    float melaninRange = max(_MelaninMax, 0.05);
+    half melanin = saturate(SolScaleMelaninDensity(_Melanin * melaninRange, densityScale) / melaninRange);
     half hemoglobin = _Hemoglobin
         + regions.r * _LipHemoglobinAdd
         + regions.g * _PalmHemoglobinAdd

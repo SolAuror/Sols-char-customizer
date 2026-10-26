@@ -19,7 +19,7 @@ import os
 
 import bpy
 
-from . import checks, joints, scene, sidecar
+from . import checks, joints, masks, scene, sidecar
 
 REPORT_TEXT_NAME = "Sol Character Checks"
 
@@ -54,6 +54,17 @@ class SolCharacterSettings(bpy.types.PropertyGroup):
         name="Compare With",
         description="Optional .solrig of the other sex, to report shape keys that differ",
         subtype="FILE_PATH",
+    )
+    mask_dir: bpy.props.StringProperty(
+        name="Mask Folder",
+        description="Where to save <body>_SkinRegion.png and <body>_SkinUtility.png, normally next to the body material in the Unity project",
+        subtype="DIR_PATH",
+        default="//",
+    )
+    mask_size: bpy.props.EnumProperty(
+        name="Mask Size",
+        items=[("1024", "1024", ""), ("2048", "2048", ""), ("4096", "4096", "")],
+        default="2048",
     )
 
 
@@ -97,6 +108,26 @@ def _run(operator, context, write_file):
     return {"FINISHED"}
 
 
+class SOL_OT_bake_skin_masks(bpy.types.Operator):
+    bl_idname = "sol.bake_skin_masks"
+    bl_label = "Bake Skin Masks"
+    bl_description = ("Bake the Sol/Character Skin region mask (lips, palms/soles/nails, blush, areolae) from the "
+                      "MPFB body groups and the utility mask (occlusion, transmission, curvature) from the body geometry")
+
+    def execute(self, context):
+        settings = context.scene.sol_character
+        try:
+            report = masks.bake(context.scene, output_dir=settings.mask_dir, size=int(settings.mask_size))
+        except (LookupError, OSError, ValueError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+
+        for note in report["notes"]:
+            self.report({"WARNING"}, note)
+        self.report({"INFO"}, f"Saved {os.path.basename(report['region'])} and {os.path.basename(report['utility'])}.")
+        return {"FINISHED"}
+
+
 class SOL_PT_character_panel(bpy.types.Panel):
     bl_label = "Sol Character"
     bl_space_type = "VIEW_3D"
@@ -112,9 +143,14 @@ class SOL_PT_character_panel(bpy.types.Panel):
         row = layout.row()
         row.operator(SOL_OT_run_checks.bl_idname, icon="CHECKMARK")
         row.operator(SOL_OT_export_sidecar.bl_idname, icon="EXPORT")
+        layout.separator()
+        layout.prop(settings, "mask_dir")
+        layout.prop(settings, "mask_size")
+        layout.operator(SOL_OT_bake_skin_masks.bl_idname, icon="TEXTURE")
 
 
-_classes = (SolCharacterSettings, SOL_OT_run_checks, SOL_OT_export_sidecar, SOL_PT_character_panel)
+_classes = (SolCharacterSettings, SOL_OT_run_checks, SOL_OT_export_sidecar, SOL_OT_bake_skin_masks,
+            SOL_PT_character_panel)
 
 
 def register():

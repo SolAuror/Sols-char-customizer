@@ -17,36 +17,108 @@ MonoBehaviour:
   - id: porcelain
     label: Porcelain
     color: {r: 0.9647059, g: 0.8235294, b: 0.72156864, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: fair
     label: Fair
     color: {r: 0.92156863, g: 0.72156864, b: 0.57254905, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: beige
     label: Beige
     color: {r: 0.84705883, g: 0.60784316, b: 0.44705883, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.5
+      hemoglobin: 0.15
+      undertone: 0.35
+    profile: {fileID: 0}
   - id: tan
     label: Tan
     color: {r: 0.7411765, g: 0.4745098, b: 0.34509805, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: light_brown
     label: Light Brown
     color: {r: 0.6156863, g: 0.36862746, b: 0.2627451, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: brown
     label: Brown
     color: {r: 0.47058824, g: 0.2627451, b: 0.18431373, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: choc
     label: Choc
     color: {r: 0.34117648, g: 0.1882353, b: 0.13725491, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: dark
     label: Dark
     color: {r: 0.20784314, g: 0.11372549, b: 0.09411765, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0
+      hemoglobin: 0
+      undertone: 0
+    profile: {fileID: 0}
   - id: zombie
     label: Zombie
     color: {r: 0.2475, g: 0.45, b: 0.25965, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 815c042a6ed9b4046acf850ad13d1d33, type: 2}
   - id: alien
     label: Alien
     color: {r: 0.52065, g: 0.801, b: 0.5375148, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: d944a66a6605d8644b5989005cdcbf54, type: 2}
   - id: drow
     label: Drow
     color: {r: 0.5124212, g: 0.33633602, b: 0.53900003, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: c5a149658e6057942af1c93b156f9eea, type: 2}
   - id: moon
     label: Moon
     color: {r: 0.51675004, g: 0.67856884, b: 0.795, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 3ec2d4f79eb81c14b8ae061118fdb9dd, type: 2}

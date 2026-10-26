@@ -82,11 +82,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SkinRegionMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 107a8e566aba6f24584ed9282516200f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SkinUtilityMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 503dfda1abed703428e2c872cebd9963, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
@@ -110,7 +110,7 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _AreolaMelaninScale: 1.35
+    - _AreolaMelaninScale: 2.5
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlushHemoglobinAdd: 0.15
@@ -130,7 +130,7 @@ Material:
     - _GlossyReflections: 1
     - _Hemoglobin: 0.15
     - _LipHemoglobinAdd: 0.35
-    - _LipMelaninScale: 0.8
+    - _LipMelaninScale: 0.85
     - _Melanin: 0.5
     - _Metallic: 0
     - _Mode: 0
@@ -163,7 +163,7 @@ Material:
     - _BaseMapMean: {r: 0.6067112, g: 0.3257004, b: 0.21795751, a: 0}
     - _Color: {r: 0.9647059, g: 0.8235294, b: 0.72156864, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
-    - _ScatterColor: {r: 1, g: 0.34999996, b: 0.19999996, a: 1}
+    - _ScatterColor: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _TransmissionColor: {r: 1, g: 0.29999998, b: 0.14999998, a: 1}
   m_BuildTextureStacks: []

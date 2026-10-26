@@ -18,9 +18,9 @@ MonoBehaviour:
     melanin: 0.25
     hemoglobin: 0.15
     undertone: 0.35
-  lipMelaninScale: 0.8
+  lipMelaninScale: 0.85
   lipHemoglobinAdd: 0.35
   palmMelaninScale: 0.3
   palmHemoglobinAdd: 0.05
   blushHemoglobinAdd: 0.15
-  areolaMelaninScale: 1.35
+  areolaMelaninScale: 2.5

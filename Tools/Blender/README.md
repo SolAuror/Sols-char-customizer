@@ -57,6 +57,19 @@ JSON, `format: "sol-character-sidecar"`, `version: 2`. Arrays stay one level dee
 - `shapes`: every shape key, the `meshes` that carry it, `boneIndices` of the joints it moves at least 0.05 mm at full weight, and `offsets` as the matching flat `x, y, z` triples.
 - `checks`: findings with `severity`, `code`, `message`, and `details`.
 
+### Skin masks
+
+**Bake Skin Masks** in the Sol tab writes `<body>_SkinRegion.png` and `<body>_SkinUtility.png` to **Mask Folder** for the `Sol/Character Skin` shader:
+
+| Texture | R | G | B | A |
+| --- | --- | --- | --- | --- |
+| Region | Lips | Palms, soles, nails | Blush (cheeks, nose tip, ears) | Areolae |
+| Utility | Occlusion | Transmission (1 where thin) | Curvature | 1 |
+
+Region channels come from the MakeHuman body-part groups (`lips`, `fingernails`, `toenails`, `nipple`, `ears`, and the hand and foot groups) on the MPFB base mesh, so keep that mesh in the `.blend`. It is found automatically as the mesh with a `lips` group whose first vertices share the body's UVs. Palms and soles are the hand and foot faces turned away from the nails; blush falls off around the `c_cheek_inflate` and `c_nose_03.x` bones. Utility channels are ray cast from the body's rest geometry. Values are smoothed over the mesh for soft edges and padded past UV island borders.
+
+In Unity, import both with **sRGB (Color Texture)** off and **Alpha Is Transparency** off, then assign them to the material's Region Mask and Utility slots.
+
 ### Tests
 
 The tests run against the `bpy` module, Blender as a Python package. `bpy` 5.2.3 needs Python 3.13:

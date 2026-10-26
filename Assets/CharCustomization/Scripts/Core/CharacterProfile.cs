@@ -22,7 +22,7 @@ namespace Sol.CharacterCustomization
 
         [Header("Skin")]
         [SerializeField] private CharacterSkinPalette skinPalette;
-        [Tooltip("Skin colour space for Sol/Character Skin materials. Empty uses the built-in human model.")]
+        [Tooltip("Human skin colour space for Sol/Character Skin materials. Empty uses the built-in human model. Tones with their own profile, such as fantasy skins, replace it while chosen.")]
         [SerializeField] private CharacterSkinProfile skinProfile;
         [SerializeField] private string[] skinColorPropertyNames = { "_BaseColor", "_Color" };
         [SerializeField] private string[] skinRoughnessPropertyNames = { "_Smoothness", "_Glossiness" };
@@ -45,7 +45,13 @@ namespace Sol.CharacterCustomization
         private bool usesCustomSkinColor;
         private Color customSkinColor = Color.white;
         private CharacterSkinParameters skinParameters = CharacterSkinParameters.Default;
-        private readonly Dictionary<Color, CharacterSkinParameters> matchedSkinParameters = new();
+        private readonly Dictionary<(CharacterSkinProfile, Color), CharacterSkinParameters> matchedSkinParameters = new();
+        // The chosen tone's own colour space, or null for skinProfile.
+        private CharacterSkinProfile toneSkinProfile;
+        // Stands in for a missing skinProfile once a tone's profile has been written to
+        // the materials, so returning to a human tone also restores the human table.
+        private CharacterSkinProfile runtimeHumanProfile;
+        private bool wroteSkinProfile;
         private readonly Dictionary<Renderer, Material[]> skinMaterialInstances = new();
         private string eyeMaterialId = CharacterRecipe.DefaultEyeMaterialId;
         private Renderer[] resolvedFemaleEyeRenderers;
@@ -57,7 +63,10 @@ namespace Sol.CharacterCustomization
         public string SkinToneId => skinToneId;
         public bool UsesCustomSkinColor => usesCustomSkinColor;
         public Color CurrentSkinColor => ResolveSkinColor();
-        public CharacterSkinProfile SkinProfile => skinProfile;
+        // The colour space skin parameters are currently in: the chosen tone's profile
+        // when it has one, otherwise the human profile.
+        public CharacterSkinProfile SkinProfile => toneSkinProfile != null ? toneSkinProfile : skinProfile;
+        public CharacterSkinProfile HumanSkinProfile => skinProfile;
         public CharacterSkinParameters SkinParameters => skinParameters;
         public float SkinRoughness => skinRoughness;
         public string EyeMaterialId => string.IsNullOrWhiteSpace(eyeMaterialId)
@@ -77,6 +86,7 @@ namespace Sol.CharacterCustomization
             if (defaultTone != null)
             {
                 skinToneId = defaultTone.Id;
+                toneSkinProfile = defaultTone.Profile;
                 skinParameters = ResolveToneParameters(defaultTone);
             }
             else if (skinProfile != null)
@@ -171,6 +181,8 @@ namespace Sol.CharacterCustomization
 
             if (recipe.UsesCustomSkinColor)
             {
+                // The recipe's tone chooses the colour space its custom colour lives in.
+                SelectToneColourSpace(recipe.SkinToneId);
                 SetCustomSkinColor(recipe.CustomSkinColor);
             }
             else
@@ -210,6 +222,7 @@ namespace Sol.CharacterCustomization
             }
 
             skinToneId = tone.Id;
+            toneSkinProfile = tone.Profile;
             usesCustomSkinColor = false;
             customSkinColor = tone.Color;
             skinParameters = ResolveToneParameters(tone);
@@ -217,7 +230,16 @@ namespace Sol.CharacterCustomization
             return true;
         }
 
-        // Sets skin colour directly in the profile's colour space. The matching colour
+        private void SelectToneColourSpace(string toneId)
+        {
+            if (skinPalette != null && skinPalette.TryGet(toneId, out CharacterSkinTone tone))
+            {
+                skinToneId = tone.Id;
+                toneSkinProfile = tone.Profile;
+            }
+        }
+
+        // Sets skin colour directly in the current colour space (see SkinProfile). The matching colour
         // is kept as the custom colour so non-skin-shader materials and colour
         // swatches stay in step.
         public void SetSkinParameters(CharacterSkinParameters parameters)
@@ -231,8 +253,9 @@ namespace Sol.CharacterCustomization
         // sRGB colour of a parameter set without regional variation, for UI swatches.
         public Color EvaluateSkinColor(CharacterSkinParameters parameters)
         {
-            Color linear = skinProfile != null
-                ? skinProfile.EvaluateLinear(parameters)
+            CharacterSkinProfile colourSpace = SkinProfile;
+            Color linear = colourSpace != null
+                ? colourSpace.EvaluateLinear(parameters)
                 : SkinColorModel.EvaluateLinear(parameters);
             return linear.gamma;
         }
@@ -305,20 +328,38 @@ namespace Sol.CharacterCustomization
         }
 
         // Colour matching searches the whole colour space, so results are cached per
-        // colour; palettes and saved swatches repeat the same few colours.
+        // colour space and colour; palettes and saved swatches repeat the same few.
         private CharacterSkinParameters MatchSkinParameters(Color srgbColor)
         {
             srgbColor.a = 1f;
-            if (matchedSkinParameters.TryGetValue(srgbColor, out CharacterSkinParameters cached))
+            CharacterSkinProfile colourSpace = SkinProfile;
+            if (matchedSkinParameters.TryGetValue((colourSpace, srgbColor), out CharacterSkinParameters cached))
             {
                 return cached;
             }
 
-            CharacterSkinParameters matched = skinProfile != null
-                ? skinProfile.FindClosest(srgbColor)
+            CharacterSkinParameters matched = colourSpace != null
+                ? colourSpace.FindClosest(srgbColor)
                 : SkinColorModel.FindClosest(srgbColor.linear);
-            matchedSkinParameters[srgbColor] = matched;
+            matchedSkinParameters[(colourSpace, srgbColor)] = matched;
             return matched;
+        }
+
+        private CharacterSkinProfile ResolveWrittenSkinProfile()
+        {
+            CharacterSkinProfile colourSpace = SkinProfile;
+            if (colourSpace == null && wroteSkinProfile)
+            {
+                if (runtimeHumanProfile == null)
+                {
+                    runtimeHumanProfile = CharacterSkinProfile.CreateRuntimeHuman();
+                }
+
+                colourSpace = runtimeHumanProfile;
+            }
+
+            wroteSkinProfile |= colourSpace != null;
+            return colourSpace;
         }
 
         private Color ResolveSkinColor()
@@ -340,11 +381,12 @@ namespace Sol.CharacterCustomization
         private void ApplySkin()
         {
             Color color = ResolveSkinColor();
-            ApplySkin(femaleSkinRenderers, color);
-            ApplySkin(maleSkinRenderers, color);
+            CharacterSkinProfile colourSpace = ResolveWrittenSkinProfile();
+            ApplySkin(femaleSkinRenderers, color, colourSpace);
+            ApplySkin(maleSkinRenderers, color, colourSpace);
         }
 
-        private void ApplySkin(Renderer[] renderers, Color color)
+        private void ApplySkin(Renderer[] renderers, Color color, CharacterSkinProfile colourSpace)
         {
             if (renderers == null)
             {
@@ -364,7 +406,7 @@ namespace Sol.CharacterCustomization
                 {
                     foreach (Material instance in instances)
                     {
-                        ApplySkinMaterial(instance, roughnessPropertyValue);
+                        ApplySkinMaterial(instance, roughnessPropertyValue, colourSpace);
                     }
 
                     continue;
@@ -386,9 +428,9 @@ namespace Sol.CharacterCustomization
                 propertyBlock.SetFloat(SolSkinShaderIds.Melanin, skinParameters.Melanin);
                 propertyBlock.SetFloat(SolSkinShaderIds.Hemoglobin, skinParameters.Hemoglobin);
                 propertyBlock.SetFloat(SolSkinShaderIds.Undertone, skinParameters.Undertone);
-                if (skinProfile != null)
+                if (colourSpace != null)
                 {
-                    skinProfile.ApplyTo(propertyBlock);
+                    colourSpace.ApplyTo(propertyBlock);
                 }
 
                 targetRenderer.SetPropertyBlock(propertyBlock);
@@ -396,7 +438,7 @@ namespace Sol.CharacterCustomization
             }
         }
 
-        private void ApplySkinMaterial(Material material, float roughnessPropertyValue)
+        private void ApplySkinMaterial(Material material, float roughnessPropertyValue, CharacterSkinProfile colourSpace)
         {
             material.SetFloat(SolSkinShaderIds.Melanin, skinParameters.Melanin);
             material.SetFloat(SolSkinShaderIds.Hemoglobin, skinParameters.Hemoglobin);
@@ -409,9 +451,9 @@ namespace Sol.CharacterCustomization
                 }
             }
 
-            if (skinProfile != null)
+            if (colourSpace != null)
             {
-                skinProfile.ApplyTo(material);
+                colourSpace.ApplyTo(material);
             }
         }
 
@@ -478,6 +520,8 @@ namespace Sol.CharacterCustomization
             }
 
             skinMaterialInstances.Clear();
+            CharacterSkinProfile.DestroyRuntime(runtimeHumanProfile);
+            runtimeHumanProfile = null;
         }
 
         private void ApplyEyeMaterial()

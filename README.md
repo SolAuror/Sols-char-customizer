@@ -35,6 +35,7 @@ The public system talks in stable IDs such as `body.weight`, `body.muscle`, and 
 - NPC baking: body blendshapes folded into shared, reference-counted meshes, with an option to drop the unused sex's rig.
 - Skin swatches and custom skin colour support.
 - Skin picker UI: melanin by hemoglobin colour plane plus melanin, hemoglobin, and undertone sliders, replacing HSV.
+- Fantasy skin tones as their own colour spaces, generated from a reference colour, with the same skin controls and regional detail as human skin.
 - `Sol/Character Skin` URP shader: melanin, hemoglobin, and undertone colour model fitted to the Monk Skin Tone Scale, region masks, wrapped-diffuse scattering, dual-lobe specular, and transmission.
 - Authored Unity UI prefab with tabbed morph groups.
 - Runtime preset save/load through JSON.

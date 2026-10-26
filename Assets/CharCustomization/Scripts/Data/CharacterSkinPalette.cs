@@ -13,12 +13,15 @@ namespace Sol.CharacterCustomization
         [Tooltip("When set, the Sol skin shader uses these parameters. Otherwise they are matched from the colour.")]
         [SerializeField] private bool hasParameters;
         [SerializeField] private CharacterSkinParameters parameters = CharacterSkinParameters.Default;
+        [Tooltip("Skin colour space for this tone, such as a fantasy skin. Empty uses the character profile's human skin profile. Skin parameter edits made after choosing this tone stay in its colour space.")]
+        [SerializeField] private CharacterSkinProfile profile;
 
         public string Id => id;
         public string Label => string.IsNullOrWhiteSpace(label) ? id : label;
         public Color Color => color;
         public bool HasParameters => hasParameters;
         public CharacterSkinParameters Parameters => parameters;
+        public CharacterSkinProfile Profile => profile;
 
         public CharacterSkinTone(string id, string label, Color color)
         {
@@ -26,6 +29,28 @@ namespace Sol.CharacterCustomization
             this.label = label;
             this.color = color;
         }
+
+        public CharacterSkinTone(
+            string id,
+            string label,
+            Color color,
+            CharacterSkinProfile profile,
+            CharacterSkinParameters parameters)
+            : this(id, label, color)
+        {
+            this.profile = profile;
+            this.parameters = parameters;
+            hasParameters = true;
+        }
+
+#if UNITY_EDITOR
+        public void ConfigureProfile(CharacterSkinProfile skinProfile, CharacterSkinParameters skinParameters)
+        {
+            profile = skinProfile;
+            parameters = skinParameters;
+            hasParameters = true;
+        }
+#endif
     }
 
     [CreateAssetMenu(

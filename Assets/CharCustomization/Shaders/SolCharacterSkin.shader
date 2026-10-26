@@ -18,16 +18,17 @@ Shader "Sol/Character Skin"
         [NoScaleOffset] _SkinLut("Skin Colour Table", 2D) = "white" {}
         _Melanin("Melanin", Range(0, 1)) = 0.25
         _Hemoglobin("Hemoglobin", Range(0, 1)) = 0.15
-        _Undertone("Undertone", Range(0, 1)) = 0.35
+        _Undertone("Undertone or Tint", Range(0, 1)) = 0.35
+        _MelaninMax("Melanin Range (set by skin profile)", Range(0.05, 1)) = 1
 
         [Header(Regions)]
         [NoScaleOffset] _SkinRegionMap("Region Mask (R lips, G palms soles nails, B blush, A areolae)", 2D) = "black" {}
-        _LipMelaninScale("Lip Melanin Scale", Range(0, 2)) = 0.8
+        _LipMelaninScale("Lip Melanin Density Scale", Range(0, 2)) = 0.85
         _LipHemoglobinAdd("Lip Hemoglobin Add", Range(0, 1)) = 0.35
-        _PalmMelaninScale("Palm Melanin Scale", Range(0, 2)) = 0.3
+        _PalmMelaninScale("Palm Melanin Density Scale", Range(0, 1)) = 0.3
         _PalmHemoglobinAdd("Palm Hemoglobin Add", Range(0, 1)) = 0.05
         _BlushHemoglobinAdd("Blush Hemoglobin Add", Range(0, 1)) = 0.15
-        _AreolaMelaninScale("Areola Melanin Scale", Range(0, 2)) = 1.35
+        _AreolaMelaninScale("Areola Melanin Density Scale", Range(1, 4)) = 2.5
 
         [Header(Surface)]
         [Normal][NoScaleOffset] _BumpMap("Normal Map", 2D) = "bump" {}
@@ -40,7 +41,7 @@ Shader "Sol/Character Skin"
         _SpecularF0("Specular F0", Range(0, 0.08)) = 0.028
 
         [Header(Scattering)]
-        _ScatterColor("Scatter Colour", Color) = (1, 0.35, 0.2, 1)
+        _ScatterColor("Scatter Tint (times skin hue)", Color) = (1, 1, 1, 1)
         _ScatterStrength("Scatter Strength", Range(0, 1)) = 0.5
         _TransmissionColor("Transmission Colour", Color) = (1, 0.3, 0.15, 1)
         _TransmissionStrength("Transmission Strength", Range(0, 2)) = 0

@@ -21,12 +21,15 @@ struct SolSkinShadingContext
     half directOcclusion;
 };
 
-// Wrapped diffuse with a per-channel wrap width: light reaches past the terminator
-// further in red than in blue, approximating pre-integrated subsurface scattering.
-// Curvature scales the wrap, so thin, curved features scatter most.
-half3 SolSkinDiffuse(half NdotL, half curvature)
+// Wrapped diffuse with a per-channel wrap width, approximating pre-integrated
+// subsurface scattering. Scattered light has passed through the skin's own
+// melanin, so the wrap takes the albedo's hue rather than a fixed red: a fixed red
+// paints red rims around eyes and fingers on deep skin. Curvature scales the wrap,
+// so thin, curved features scatter most.
+half3 SolSkinDiffuse(half NdotL, half curvature, half3 albedo)
 {
-    half3 wrap = _ScatterColor.rgb * (_ScatterStrength * curvature);
+    half3 hue = albedo / max(max(albedo.r, max(albedo.g, albedo.b)), 0.0001);
+    half3 wrap = _ScatterColor.rgb * hue * (_ScatterStrength * curvature);
     return saturate((NdotL + wrap) / (1.0 + wrap));
 }
 
@@ -56,15 +59,16 @@ float SolDualLobeSpecular(float NdotH, float NdotL, float NdotV, half perceptual
     return lerp(lobeA, lobeB, _SecondLobeWeight);
 }
 
-// Karis' analytic fit of the split-sum environment BRDF.
+// URP Lit's environment BRDF. Karis' mobile fit adds a roughness bias of about
+// 0.06 at normal incidence, three times skin's F0, which spreads a grey sheen
+// over deep skin and reads as ashy.
 half3 SolEnvironmentBRDF(half3 f0, half perceptualRoughness, half NdotV)
 {
-    const half4 c0 = half4(-1.0, -0.0275, -0.572, 0.022);
-    const half4 c1 = half4(1.0, 0.0425, 1.04, -0.04);
-    half4 r = perceptualRoughness * c0 + c1;
-    half a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
-    half2 ab = half2(-1.04, 1.04) * a004 + r.zw;
-    return f0 * ab.x + ab.y;
+    half roughness = max(perceptualRoughness * perceptualRoughness, HALF_MIN_SQRT);
+    half surfaceReduction = 1.0 / (roughness * roughness + 1.0);
+    half3 grazingTerm = saturate((1.0 - perceptualRoughness) + f0);
+    half fresnelTerm = Pow4(1.0 - NdotV);
+    return surfaceReduction * lerp(f0, grazingTerm, fresnelTerm);
 }
 
 half3 SolSkinDirectLight(SolSkinSurface surface, SolSkinShadingContext context, Light light)
@@ -75,7 +79,7 @@ half3 SolSkinDirectLight(SolSkinSurface surface, SolSkinShadingContext context, 
     half shadow = light.shadowAttenuation * context.directOcclusion;
 
     half3 f0 = _SpecularF0.xxx;
-    half3 diffuse = SolSkinDiffuse(NdotL, surface.curvature) * surface.albedo * (1.0 - _SpecularF0);
+    half3 diffuse = SolSkinDiffuse(NdotL, surface.curvature, surface.albedo) * surface.albedo * (1.0 - _SpecularF0);
 
     float3 halfDir = SafeNormalize(float3(lightDir) + float3(context.viewDirWS));
     float clampedNdotL = saturate(NdotL);
