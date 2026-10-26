@@ -117,7 +117,7 @@ finalization.Finalized += player => AttachCharacterToPlayer(player.Recipe);
 - `Tools > Sol > Character Customization > Validate Selected Character Setup` checks catalog validity, active roots, humanoid Animator, blendshape bindings, required rig bones, IK bridge, and Animator Controller IK Pass.
 - ScriptableObject presets are authoring assets rather than player save files. User-saved presets persist through `CharacterPresetSaveRepository`.
 - Editor setup tools are explicit menu actions. They no longer auto-run on editor reload, so designer prefab edits are not silently rewritten.
-- Game-specific progression, hair, and clothing remain outside the current iteration.
+- Game-specific progression and clothing remain outside the current iteration. Hair is in early scope: `CharacterHair` shows one `CharacterHairStyle` per character root (hair cards built and exported by `Tools/Blender`, skinned to the head with the body's head blendshapes) and colours it; recipes from version 4 save the style and colour, and the demo menu's optional Hair tab edits them.
 
 ## Validation Checkpoint
 The earlier tabbed-menu iteration was validated in Unity 6000.3.9f1 on 24 June 2026. The finalization and runtime-preset iterations add Edit Mode coverage for recipe JSON, multiple-player persistence, runtime-preset persistence, duplicate overwrite handling, malformed files, and restrained randomization, plus validator and Play Mode checks for the authored profile, skin, footer, and camera wiring.
@@ -147,4 +147,4 @@ Play Mode proof is still required on the MPFB characters. Run each case with gro
 8. Move demo-only FBX, materials, fonts, sprites, lighting, and scenes into a sample boundary during package extraction.
 9. Expand automated coverage for value clamping, bipolar weights, stat-growth mapping, recipe isolation, missing bindings, skeletal channels, skin rendering, and gameplay-camera handoff.
 10. Expand installation and packaging documentation, declare dependencies, audit imported asset redistribution rights, and add version and changelog files.
-11. Add appearance option providers for hair and clothing only when those selectors become active scope.
+11. Add appearance option providers for clothing only when that selector becomes active scope; extend hair beyond one demo style (style catalogue, per-sex defaults, NPC presets).

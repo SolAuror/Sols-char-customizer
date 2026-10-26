@@ -166,7 +166,7 @@ GameObject:
   m_Icon: {fileID: 5132851093641282708, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1131540852
 Transform:
   m_ObjectHideFlags: 0
@@ -368,6 +368,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 582304754}
     - target: {fileID: 5533027457802694159, guid: af97d47cfc9ab634fa20ef2bf0c958be, type: 3}
+      propertyPath: activeSex
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5533027457802694159, guid: af97d47cfc9ab634fa20ef2bf0c958be, type: 3}
       propertyPath: femaleRoot
       value: 
       objectReference: {fileID: 115256447}
@@ -556,6 +560,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1656963709993674551, guid: 5423a34e282e74e41952c90075b4afde, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2687685998883255284, guid: 5423a34e282e74e41952c90075b4afde, type: 3}
       propertyPath: m_LocalPosition.y
       value: -0.1850636
@@ -572,6 +580,10 @@ PrefabInstance:
       propertyPath: driver
       value: 
       objectReference: {fileID: 2577808931810324612}
+    - target: {fileID: 6386756463275294639, guid: 5423a34e282e74e41952c90075b4afde, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9186581403113931237, guid: 5423a34e282e74e41952c90075b4afde, type: 3}
       propertyPath: driver
       value: 

@@ -25,7 +25,8 @@ namespace Sol.CharacterCustomization
     {
         // Version 3 adds skin colour parameters. Older recipes have none, and the
         // character profile derives them from the tone or custom colour on apply.
-        public const int CurrentVersion = 3;
+        // Version 4 adds the hairstyle and hair colour; older recipes leave hair as it is.
+        public const int CurrentVersion = 4;
         public const string DefaultSkinToneId = "fair";
         public const string DefaultEyeMaterialId = "brown";
 
@@ -37,6 +38,10 @@ namespace Sol.CharacterCustomization
         [SerializeField] private bool hasSkinParameters;
         [SerializeField] private CharacterSkinParameters skinParameters = CharacterSkinParameters.Default;
         [SerializeField] private string eyeMaterialId = DefaultEyeMaterialId;
+        [SerializeField] private bool hasHair;
+        [SerializeField] private string hairStyleId = string.Empty;
+        [SerializeField] private Color hairColor = Color.white;
+        [SerializeField] private float hairSheen = CharacterHair.DefaultSheen;
         [SerializeField] private List<CharacterMorphValue> morphValues = new();
 
         public int Version => version;
@@ -51,6 +56,14 @@ namespace Sol.CharacterCustomization
             : eyeMaterialId;
         public IReadOnlyList<CharacterMorphValue> MorphValues =>
             morphValues ?? (IReadOnlyList<CharacterMorphValue>)Array.Empty<CharacterMorphValue>();
+        public bool HasHair => hasHair;
+        // A CharacterHair style ID, empty for the character's first style, or
+        // CharacterHair.NoneStyleId for no hair.
+        public string HairStyleId => hairStyleId ?? string.Empty;
+        // sRGB, like material colours in the inspector.
+        public Color HairColor => hairColor;
+        // 0 matte, 1 glossy.
+        public float HairSheen => hairSheen;
 
         public CharacterRecipe()
         {
@@ -120,6 +133,10 @@ namespace Sol.CharacterCustomization
                 : recipeEyeMaterialId.Trim();
             hasSkinParameters = false;
             skinParameters = CharacterSkinParameters.Default;
+            hasHair = false;
+            hairStyleId = string.Empty;
+            hairColor = Color.white;
+            hairSheen = CharacterHair.DefaultSheen;
             morphValues ??= new List<CharacterMorphValue>();
             morphValues.Clear();
 
@@ -159,12 +176,25 @@ namespace Sol.CharacterCustomization
             {
                 SetSkinParameters(source.SkinParameters);
             }
+
+            if (source.HasHair)
+            {
+                SetHair(source.HairStyleId, source.HairColor, source.HairSheen);
+            }
         }
 
         public void SetSkinParameters(CharacterSkinParameters parameters)
         {
             hasSkinParameters = true;
             skinParameters = new CharacterSkinParameters(parameters.Melanin, parameters.Hemoglobin, parameters.Undertone);
+        }
+
+        public void SetHair(string styleId, Color color, float sheen = CharacterHair.DefaultSheen)
+        {
+            hasHair = true;
+            hairStyleId = string.IsNullOrWhiteSpace(styleId) ? string.Empty : styleId.Trim();
+            hairColor = new Color(color.r, color.g, color.b, 1f);
+            hairSheen = Mathf.Clamp01(sheen);
         }
 
         public bool HasValidIdentifiers(out string error)

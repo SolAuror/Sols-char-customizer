@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Sol_M14_Cards_Fringe
+  m_Shader: {fileID: 4800000, guid: 326cfdab61209224698d12d87b5d9fc2, type: 3}
+  m_Parent: {fileID: 2100000, guid: 78e8b90c9c2a8a04298f69b57ea58d3b, type: 2}
+  m_ModifiedSerializedProperties: 16
+  m_ValidKeywords:
+  - _SOL_HAIR_FRINGE
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap: {}
+  disabledShaderPasses:
+  - SHADOWCASTER
+  - DepthOnly
+  - DepthNormals
+  - DepthNormalsOnly
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _DstBlend: 10
+    - _Fringe: 1
+    - _SrcBlend: 5
+    - _ZWrite: 0
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

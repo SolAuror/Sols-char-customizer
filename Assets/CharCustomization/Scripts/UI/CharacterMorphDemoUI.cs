@@ -41,6 +41,8 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Button addSkinButton;
         [SerializeField] private Button customColorToggleButton;
         [SerializeField] private GameObject customColorPanel;
+        [Tooltip("Keep the custom colour picker open and hide its toggle button.")]
+        [SerializeField] private bool customColorAlwaysOpen;
         [SerializeField] private Slider hueSlider;
         [SerializeField] private Slider saturationSlider;
         [SerializeField] private Slider valueSlider;
@@ -48,6 +50,9 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Image customColorPreview;
         [Tooltip("Melanin, hemoglobin, and undertone picker. When assigned it replaces the HSV sliders.")]
         [SerializeField] private CharacterSkinParameterPicker skinParameterPicker;
+        [Tooltip("Shown on the Hair tab. Optional: menus without a Hair tab leave it empty.")]
+        [SerializeField] private GameObject hairPanel;
+        [SerializeField] private CharacterHairPicker hairPicker;
         [SerializeField] private GameObject eyeColorGrid;
         [SerializeField] private CharacterEyeSwatchButton[] eyeSwatches = Array.Empty<CharacterEyeSwatchButton>();
         [SerializeField] private GameObject bodyTypeHeading;
@@ -86,6 +91,9 @@ namespace Sol.CharacterCustomization
         private static readonly Color AccentColor = new(0.82f, 0.73f, 0.55f, 1f);
         private static readonly Color InactiveColor = new(0.27f, 0.27f, 0.27f, 1f);
         private const int ColorGradientTextureWidth = 128;
+        // How far the roughness track lightens the skin colour at its glossy end.
+        private const float RoughnessTrackHighlight = 0.45f;
+        private CharacterSliderGradient roughnessGradient;
         private const string DeletePresetConfirmationKey = "delete_character_preset";
         private const string BodyGroupId = "Body";
         private const string EyeGroupId = "Eyes";
@@ -299,6 +307,10 @@ namespace Sol.CharacterCustomization
             {
                 ConfigureRoughnessSlider();
                 roughnessSlider.SetValueWithoutNotify(profile.SkinRoughness);
+                // Glossy on the left, matte on the right, in the current skin colour.
+                roughnessGradient ??= new CharacterSliderGradient(roughnessSlider);
+                Color glossy = Color.Lerp(color, Color.white, RoughnessTrackHighlight);
+                roughnessGradient.Paint(t => Color.Lerp(glossy, color, t * (2f - t)));
             }
 
             customColorPreview.color = color;
@@ -370,7 +382,8 @@ namespace Sol.CharacterCustomization
             initialized = true;
             RefreshPresetOptions();
             LoadSavedSkinSwatches();
-            customColorPanel.SetActive(false);
+            customColorPanel.SetActive(customColorAlwaysOpen);
+            customColorToggleButton.gameObject.SetActive(!customColorAlwaysOpen);
             RegisterListeners();
             controller.SetSex(controller.ActiveSex);
             ApplySelectedGroup(false);
@@ -745,12 +758,23 @@ namespace Sol.CharacterCustomization
 
         private void ValidateTabs(List<string> errors)
         {
-            IReadOnlyList<string> expectedTabs = CharacterCustomizationUiConfig.TabGroups;
             if (tabButtons == null)
             {
                 errors.Add("tabButtons is unassigned");
                 return;
             }
+
+            // Optional tabs (hair) only count when the menu has them.
+            var presentGroups = new HashSet<string>(StringComparer.Ordinal);
+            foreach (CharacterMorphTabButton present in tabButtons)
+            {
+                if (present != null && present.IsConfigured)
+                {
+                    presentGroups.Add(present.GroupId);
+                }
+            }
+
+            IReadOnlyList<string> expectedTabs = CharacterCustomizationUiConfig.ExpectedTabs(presentGroups);
 
             if (tabButtons.Length != expectedTabs.Count)
             {
@@ -1147,6 +1171,16 @@ namespace Sol.CharacterCustomization
                 return;
             }
 
+            if (CharacterCustomizationUiConfig.IsHairGroup(selectedGroup))
+            {
+                if (hairPicker != null)
+                {
+                    hairPicker.ResetToDefault();
+                }
+
+                return;
+            }
+
             if (controller.ResetGroup(selectedGroup))
             {
                 RefreshPanel();
@@ -1338,7 +1372,12 @@ namespace Sol.CharacterCustomization
         {
             bool showingPresets = CharacterCustomizationUiConfig.IsPresetGroup(selectedGroup);
             bool showingSkin = CharacterCustomizationUiConfig.IsSkinGroup(selectedGroup);
-            bool showingMorphs = !showingPresets && !showingSkin;
+            bool showingHair = CharacterCustomizationUiConfig.IsHairGroup(selectedGroup);
+            bool showingMorphs = !showingPresets && !showingSkin && !showingHair;
+            if (hairPanel != null)
+            {
+                hairPanel.SetActive(showingHair);
+            }
             bool showingBody = string.Equals(selectedGroup, BodyGroupId, StringComparison.Ordinal);
             bool showingEyes = string.Equals(selectedGroup, EyeGroupId, StringComparison.Ordinal);
             presetPanel.SetActive(showingPresets);
@@ -1363,6 +1402,10 @@ namespace Sol.CharacterCustomization
             else if (showingSkin)
             {
                 resetGroupButtonLabel.text = "Reset Skin";
+            }
+            else if (showingHair)
+            {
+                resetGroupButtonLabel.text = "Reset Hair";
             }
             else
             {
@@ -1449,6 +1492,11 @@ namespace Sol.CharacterCustomization
             GetPresetNameSource()?.onValueChanged.AddListener(OnPresetNameChanged);
             addSkinButton?.onClick.AddListener(SaveCurrentSkinColor);
             customColorToggleButton?.onClick.AddListener(ToggleCustomColorPanel);
+            if (hairPicker != null && profile.Hair != null)
+            {
+                hairPicker.Bind(profile.Hair);
+            }
+
             if (skinParameterPicker != null)
             {
                 // The picker may reuse the authored HSV slider objects, so they are
@@ -1967,6 +2015,8 @@ namespace Sol.CharacterCustomization
 
         private void DestroyColorGradientResources()
         {
+            roughnessGradient?.Dispose();
+            roughnessGradient = null;
             DestroyGeneratedObject(hueGradientSprite);
             DestroyGeneratedObject(saturationGradientSprite);
             DestroyGeneratedObject(valueGradientSprite);

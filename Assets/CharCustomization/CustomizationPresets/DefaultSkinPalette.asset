@@ -122,3 +122,255 @@ MonoBehaviour:
       hemoglobin: 0.15
       undertone: 1
     profile: {fileID: 11400000, guid: 3ec2d4f79eb81c14b8ae061118fdb9dd, type: 2}
+  - id: ivory
+    label: Ivory
+    color: {r: 0.9490196, g: 0.88235295, b: 0.8509804, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: rose
+    label: Rose
+    color: {r: 0.92156863, g: 0.78431374, b: 0.7254902, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: peach
+    label: Peach
+    color: {r: 0.9411765, g: 0.79607844, b: 0.6666667, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: golden_fair
+    label: Golden Fair
+    color: {r: 0.9098039, g: 0.75686276, b: 0.5647059, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: olive_light
+    label: Light Olive
+    color: {r: 0.8235294, g: 0.7058824, b: 0.54901963, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: olive
+    label: Olive
+    color: {r: 0.72156864, g: 0.6039216, b: 0.43137255, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: honey
+    label: Honey
+    color: {r: 0.7882353, g: 0.56078434, b: 0.36862746, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: sienna
+    label: Sienna
+    color: {r: 0.70980394, g: 0.40392157, b: 0.2901961, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: caramel
+    label: Caramel
+    color: {r: 0.65882355, g: 0.41960785, b: 0.27058825, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: rosy_brown
+    label: Rosy Brown
+    color: {r: 0.6117647, g: 0.37254903, b: 0.30588236, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: cinnamon
+    label: Cinnamon
+    color: {r: 0.5529412, g: 0.32156864, b: 0.20784314, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: bronze
+    label: Bronze
+    color: {r: 0.47843137, g: 0.2901961, b: 0.18039216, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: mahogany
+    label: Mahogany
+    color: {r: 0.41960785, g: 0.2, b: 0.14117648, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: umber
+    label: Umber
+    color: {r: 0.36862746, g: 0.22745098, b: 0.14509805, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: espresso
+    label: Espresso
+    color: {r: 0.2901961, g: 0.17254902, b: 0.12941177, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: ebony
+    label: Ebony
+    color: {r: 0.18039216, g: 0.11372549, b: 0.09019608, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: goblin
+    label: Goblin
+    color: {r: 0.5529412, g: 0.6666667, b: 0.29411766, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 064a03c1ef5479d40817c08c9a30e639, type: 2}
+  - id: orc
+    label: Orc
+    color: {r: 0.35686275, g: 0.49019608, b: 0.22745098, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: d8ed2432a2070c844b591719c44214d9, type: 2}
+  - id: teal
+    label: Teal
+    color: {r: 0.24313726, g: 0.54901963, b: 0.5254902, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: cad32ef002b03ef40b4f8ade71fd0b2b, type: 2}
+  - id: frost
+    label: Frost
+    color: {r: 0.61960787, g: 0.76862746, b: 0.87058824, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 5d70ab137bd937f4faac158f452744be, type: 2}
+  - id: abyssal
+    label: Abyssal
+    color: {r: 0.18039216, g: 0.22745098, b: 0.43137255, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 5e4734fe4f35ab744b691b2ba48257a2, type: 2}
+  - id: violet
+    label: Violet
+    color: {r: 0.41960785, g: 0.2901961, b: 0.6039216, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 1cf0bd091e692dc43ab9aaaca25309ba, type: 2}
+  - id: lilac
+    label: Lilac
+    color: {r: 0.78039217, g: 0.65882355, b: 0.87058824, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: ba1b0c6f2b4cfd94d8df374474f54102, type: 2}
+  - id: fae
+    label: Fae
+    color: {r: 0.84705883, g: 0.5411765, b: 0.7058824, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 2f3dabf5a40933e4da4db85412d1bab2, type: 2}
+  - id: blood
+    label: Blood
+    color: {r: 0.5568628, g: 0.16470589, b: 0.16470589, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: infernal
+    label: Infernal
+    color: {r: 0.30588236, g: 0.08627451, b: 0.08627451, a: 1}
+    hasParameters: 0
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 0}
+  - id: ash
+    label: Ash
+    color: {r: 0.6039216, g: 0.6039216, b: 0.6039216, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: f2783a75ac5fe9f4591d62cad298cc29, type: 2}
+  - id: slate
+    label: Slate
+    color: {r: 0.3529412, g: 0.37254903, b: 0.4, a: 1}
+    hasParameters: 1
+    parameters:
+      melanin: 0.3
+      hemoglobin: 0.15
+      undertone: 1
+    profile: {fileID: 11400000, guid: 57313a8074574b44b967403bce6d866d, type: 2}

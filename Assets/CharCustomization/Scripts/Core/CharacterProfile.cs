@@ -38,6 +38,10 @@ namespace Sol.CharacterCustomization
         [SerializeField] private Renderer[] femaleEyeRenderers = Array.Empty<Renderer>();
         [SerializeField] private Renderer[] maleEyeRenderers = Array.Empty<Renderer>();
 
+        [Header("Hair")]
+        [Tooltip("Chooses and colours the hairstyle; recipes save and restore it. Empty uses one on this object.")]
+        [SerializeField] private CharacterHair hair;
+
         private MaterialPropertyBlock propertyBlock;
         private int[] skinColorPropertyIds;
         private int[] skinRoughnessPropertyIds;
@@ -58,6 +62,7 @@ namespace Sol.CharacterCustomization
         private Renderer[] resolvedMaleEyeRenderers;
 
         public CharacterMorphController Controller => controller;
+        public CharacterHair Hair => hair;
         public CharacterSkinPalette SkinPalette => skinPalette;
         public CharacterEyeMaterialPalette EyePalette => eyePalette;
         public string SkinToneId => skinToneId;
@@ -79,6 +84,11 @@ namespace Sol.CharacterCustomization
             if (controller == null)
             {
                 controller = GetComponent<CharacterMorphController>();
+            }
+
+            if (hair == null)
+            {
+                hair = GetComponent<CharacterHair>();
             }
 
             CacheSkinPropertyIds();
@@ -159,6 +169,11 @@ namespace Sol.CharacterCustomization
                 EyeMaterialId,
                 controller.CaptureMorphValues());
             recipe.SetSkinParameters(skinParameters);
+            if (hair != null)
+            {
+                recipe.SetHair(hair.StyleId, hair.Color, hair.Sheen);
+            }
+
             return recipe;
         }
 
@@ -199,6 +214,15 @@ namespace Sol.CharacterCustomization
             }
 
             SetEyeMaterial(recipe.EyeMaterialId);
+
+            // Version 4 recipes carry hair; older ones leave the current hair.
+            if (hair != null && recipe.HasHair)
+            {
+                hair.SetStyle(recipe.HairStyleId);
+                hair.SetColor(recipe.HairColor);
+                hair.SetSheen(recipe.HairSheen);
+            }
+
             return true;
         }
 
@@ -312,6 +336,15 @@ namespace Sol.CharacterCustomization
                 if (option != null)
                 {
                     SetEyeMaterial(option.Id);
+                }
+            }
+
+            if (hair != null && hair.Palette != null && hair.Palette.Options.Count > 0)
+            {
+                CharacterHairColorOption option = hair.Palette.Options[random.Next(0, hair.Palette.Options.Count)];
+                if (option != null)
+                {
+                    hair.SetColor(option.Color);
                 }
             }
         }

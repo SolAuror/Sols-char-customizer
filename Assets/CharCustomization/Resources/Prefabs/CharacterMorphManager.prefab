@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 667402211724877441}
   - component: {fileID: 4876277818347838247}
   - component: {fileID: 7763284161080261142}
+  - component: {fileID: 290191878816541124}
   m_Layer: 0
   m_Name: CharacterMorphManager
   m_TagString: Untagged
@@ -170,3 +171,23 @@ MonoBehaviour:
   - {fileID: 0}
   maleEyeRenderers:
   - {fileID: 0}
+  hair: {fileID: 290191878816541124}
+--- !u!114 &290191878816541124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3076914116413420698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5aeb422775e164da0d60213049201e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterHair
+  controller: {fileID: 5533027457802694159}
+  palette: {fileID: 11400000, guid: b1ec51f07cc017c41900103a5219f17c, type: 2}
+  styleId: 
+  color: {r: 0.27, g: 0.19, b: 0.12, a: 1}
+  sheen: 0.25
+  colorPropertyNames:
+  - _BaseColor
