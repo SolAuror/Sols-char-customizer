@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b53801a01b2c16c4db70bee245867dfe
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Core/OverrideCapsuleCollider.cs
+  uploadId: 1023146

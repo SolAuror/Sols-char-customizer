@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 44d6a586e6acd4648b7b61afc88996c0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Editor/Animal/Menu Create/MenuCreateWayPoint.cs
+  uploadId: 1023146

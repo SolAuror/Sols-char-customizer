@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 90bbde231dadd8c4c84151b1717f21f9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/IK/IK IDs/IK_OffHand.asset
+  uploadId: 1023146

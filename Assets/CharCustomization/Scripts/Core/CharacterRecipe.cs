@@ -26,7 +26,8 @@ namespace Sol.CharacterCustomization
         // Version 3 adds skin colour parameters. Older recipes have none, and the
         // character profile derives them from the tone or custom colour on apply.
         // Version 4 adds the hairstyle and hair colour; older recipes leave hair as it is.
-        public const int CurrentVersion = 4;
+        // Version 5 adds tattoos; older recipes leave tattoos as they are.
+        public const int CurrentVersion = 5;
         public const string DefaultSkinToneId = "fair";
         public const string DefaultEyeMaterialId = "brown";
 
@@ -42,6 +43,8 @@ namespace Sol.CharacterCustomization
         [SerializeField] private string hairStyleId = string.Empty;
         [SerializeField] private Color hairColor = Color.white;
         [SerializeField] private float hairSheen = CharacterHair.DefaultSheen;
+        [SerializeField] private bool hasTattoos;
+        [SerializeField] private List<CharacterTattooPlacement> tattoos = new();
         [SerializeField] private List<CharacterMorphValue> morphValues = new();
 
         public int Version => version;
@@ -64,6 +67,10 @@ namespace Sol.CharacterCustomization
         public Color HairColor => hairColor;
         // 0 matte, 1 glossy.
         public float HairSheen => hairSheen;
+        public bool HasTattoos => hasTattoos;
+        // In the order they are layered, first underneath.
+        public IReadOnlyList<CharacterTattooPlacement> Tattoos =>
+            tattoos ?? (IReadOnlyList<CharacterTattooPlacement>)Array.Empty<CharacterTattooPlacement>();
 
         public CharacterRecipe()
         {
@@ -137,6 +144,9 @@ namespace Sol.CharacterCustomization
             hairStyleId = string.Empty;
             hairColor = Color.white;
             hairSheen = CharacterHair.DefaultSheen;
+            hasTattoos = false;
+            tattoos ??= new List<CharacterTattooPlacement>();
+            tattoos.Clear();
             morphValues ??= new List<CharacterMorphValue>();
             morphValues.Clear();
 
@@ -181,6 +191,11 @@ namespace Sol.CharacterCustomization
             {
                 SetHair(source.HairStyleId, source.HairColor, source.HairSheen);
             }
+
+            if (source.HasTattoos)
+            {
+                SetTattoos(source.Tattoos);
+            }
         }
 
         public void SetSkinParameters(CharacterSkinParameters parameters)
@@ -197,12 +212,39 @@ namespace Sol.CharacterCustomization
             hairSheen = Mathf.Clamp01(sheen);
         }
 
+        // Replaces the tattoos; an empty list saves a character with none, which clears
+        // the tattoos of whoever it is applied to.
+        public void SetTattoos(IReadOnlyList<CharacterTattooPlacement> placements)
+        {
+            hasTattoos = true;
+            tattoos ??= new List<CharacterTattooPlacement>();
+            tattoos.Clear();
+            if (placements == null)
+            {
+                return;
+            }
+
+            for (int index = 0; index < placements.Count; index++)
+            {
+                tattoos.Add(placements[index]);
+            }
+        }
+
         public bool HasValidIdentifiers(out string error)
         {
             if (morphValues == null)
             {
                 error = "The recipe has no morph value collection.";
                 return false;
+            }
+
+            foreach (CharacterTattooPlacement tattoo in Tattoos)
+            {
+                if (string.IsNullOrWhiteSpace(tattoo.DesignId))
+                {
+                    error = "The recipe contains a tattoo without a design ID.";
+                    return false;
+                }
             }
 
             var identifiers = new HashSet<string>(StringComparer.Ordinal);

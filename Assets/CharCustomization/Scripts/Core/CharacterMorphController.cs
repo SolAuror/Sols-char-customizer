@@ -61,6 +61,22 @@ namespace Sol.CharacterCustomization
         public bool IsBaked => bakedRenderers.Count > 0;
         public bool IsBakeStale => IsBaked && !FoldWeightsMatch(BuildFoldWeights(bakedSex), bakedFoldWeights);
 
+        // The mesh a renderer had before BakeActiveCharacter folded its blendshapes in, or
+        // its current mesh when it is not baked. Tattoos project onto this rest shape so
+        // they land in the same place whether or not the character is baked.
+        public Mesh GetUnbakedMesh(SkinnedMeshRenderer renderer)
+        {
+            foreach (BakedRenderer baked in bakedRenderers)
+            {
+                if (baked.Renderer == renderer)
+                {
+                    return baked.Source;
+                }
+            }
+
+            return renderer != null ? renderer.sharedMesh : null;
+        }
+
         private void Awake()
         {
             Initialize();

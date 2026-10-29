@@ -18,23 +18,23 @@ namespace Sol.CharacterCustomization.EditorTools
         private const string DemoMenuPrefabPath = "Assets/CharCustomization/Resources/Prefabs/CharacterMorphMenuDemoUI.prefab";
         private const string ManagerPrefabPath = "Assets/CharCustomization/Resources/Prefabs/CharacterMorphManager.prefab";
         private const string PalettePath = "Assets/CharCustomization/CustomizationPresets/DefaultHairPalette.asset";
-        private const float ContentWidth = 537f;
-        private const float RowHeight = 40f;
-        private const float SwatchSize = 48f;
-        private const float SwatchSpacing = 10f;
-        private const int GridInset = 4;
-        private const float TileSize = 96f;
-        private const float TileNameHeight = 20f;
-        private static readonly Color TileColour = new(0.16f, 0.16f, 0.16f, 1f);
+        internal const float ContentWidth = 537f;
+        internal const float RowHeight = 40f;
+        internal const float SwatchSize = 48f;
+        internal const float SwatchSpacing = 10f;
+        internal const int GridInset = 4;
+        internal const float TileSize = 96f;
+        internal const float TileNameHeight = 20f;
+        internal static readonly Color TileColour = new(0.16f, 0.16f, 0.16f, 1f);
         // Two and a half rows of style tiles and three rows of colours show; more scroll.
         private const float StyleAreaHeight = TileSize * 2.5f + SwatchSpacing * 2f + GridInset;
         private const float SwatchAreaHeight = SwatchSize * 3f + SwatchSpacing * 2f + GridInset * 2;
-        private const float PanelTopPadding = 8f;
-        private const float SectionSpacing = 8f;
-        private const float HeadingHeight = 34f;
-        private const float PreviewHeight = 22f;
+        internal const float PanelTopPadding = 8f;
+        internal const float SectionSpacing = 8f;
+        internal const float HeadingHeight = 34f;
+        internal const float PreviewHeight = 22f;
         // Matches the skin picker's spacing between preview, field, and slider rows.
-        private const float PickerRowSpacing = 5f;
+        internal const float PickerRowSpacing = 5f;
         private const float PickerHeight =
             PreviewHeight + SolSkinPickerSetup.PlaneHeight + RowHeight * 4f + PickerRowSpacing * 5f;
 
@@ -317,7 +317,7 @@ namespace Sol.CharacterCustomization.EditorTools
         }
 
 
-        private static Slider FindSkinSlider(SerializedObject serializedMenu)
+        internal static Slider FindSkinSlider(SerializedObject serializedMenu)
         {
             if (serializedMenu.FindProperty("skinParameterPicker").objectReferenceValue is CharacterSkinParameterPicker picker)
             {
@@ -374,7 +374,7 @@ namespace Sol.CharacterCustomization.EditorTools
             return panel;
         }
 
-        private static void AddLabel(Transform parent, TMP_Text style, string text, float height, float scale)
+        internal static void AddLabel(Transform parent, TMP_Text style, string text, float height, float scale)
         {
             var labelObject = new GameObject($"{text} Label", typeof(RectTransform), typeof(TextMeshProUGUI))
             {
@@ -397,7 +397,7 @@ namespace Sol.CharacterCustomization.EditorTools
             label.raycastTarget = false;
         }
 
-        private static GameObject Copy(GameObject source, Transform parent, string name, float height)
+        internal static GameObject Copy(GameObject source, Transform parent, string name, float height)
         {
             GameObject copy = Object.Instantiate(source, parent);
             copy.name = name;
@@ -416,7 +416,7 @@ namespace Sol.CharacterCustomization.EditorTools
         }
 
         // A vertical scroll view whose content is a grid that grows with its children.
-        private static (RectTransform content, GridLayoutGroup grid) CreateScrollArea(Transform parent, string name, float height)
+        internal static (RectTransform content, GridLayoutGroup grid) CreateScrollArea(Transform parent, string name, float height)
         {
             var root = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(ScrollRect))
             {
@@ -518,7 +518,7 @@ namespace Sol.CharacterCustomization.EditorTools
         }
 
         // A rounded, outlined square button, styled like the skin and hair swatches.
-        private static GameObject CreateSquare(string name, Transform parent, Color colour)
+        internal static GameObject CreateSquare(string name, Transform parent, Color colour)
         {
             var square = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline))
             {
@@ -555,13 +555,13 @@ namespace Sol.CharacterCustomization.EditorTools
             return rect;
         }
 
-        private static int Columns(float cellSize)
+        internal static int Columns(float cellSize)
         {
             return Mathf.Max(1, Mathf.FloorToInt((ContentWidth - GridInset * 2 + SwatchSpacing) / (cellSize + SwatchSpacing)));
         }
 
         // Copies a skin slider's row (label and slider) and relabels it.
-        private static Slider CopySliderRow(Slider source, Transform parent, string label)
+        internal static Slider CopySliderRow(Slider source, Transform parent, string label)
         {
             Transform row = source.transform.parent;
             int sliderIndex = row.GetComponentsInChildren<Slider>(true).ToList().IndexOf(source);

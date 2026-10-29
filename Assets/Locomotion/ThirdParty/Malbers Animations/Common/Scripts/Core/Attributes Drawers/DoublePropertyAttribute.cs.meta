@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d8664c42ead657b4fb42bb439f55dd3c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Core/Attributes Drawers/DoublePropertyAttribute.cs
+  uploadId: 1023146

@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: bca9db16b8a10364a89393ef17715b9d
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/IK/IK Processors/IK Generic/IKProcessorQuadrupedFoot.cs
+  uploadId: 1023146

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c67b56e47e0adb04abe68ff0f7d94c1f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Utilities/Mesh/ScaleUnifier.cs
+  uploadId: 1023146

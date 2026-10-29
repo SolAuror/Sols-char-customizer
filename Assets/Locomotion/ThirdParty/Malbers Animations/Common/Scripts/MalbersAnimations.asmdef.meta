@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f0a1b964e56e3424a8ef69ae9ed9944c
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/MalbersAnimations.asmdef
+  uploadId: 1023146

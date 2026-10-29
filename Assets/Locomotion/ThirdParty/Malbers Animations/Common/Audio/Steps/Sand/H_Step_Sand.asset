@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1233149941 &-8957772846237997671
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Sand01_{-8957772846237997671}
+  m_AudioClip: {fileID: 8300000, guid: 34679ba4d5b42764b8b76060496af1f4, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &-7268590379982607492
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Sand03_{-7268590379982607492}
+  m_AudioClip: {fileID: 8300000, guid: 2d81a7152d38c7e4193d0345ac3b962e, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &-2532783985069122554
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Sand05_{-2532783985069122554}
+  m_AudioClip: {fileID: 8300000, guid: 41a5b9a7d3168f44fb7f3ebf53f8af92, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &-2036343217344391881
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Sand04_{-2036343217344391881}
+  m_AudioClip: {fileID: 8300000, guid: d31aec70ff6f18a4194a57afe500be09, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &3358971839293448806
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Sand02_{3358971839293448806}
+  m_AudioClip: {fileID: 8300000, guid: ad7c5b065df564548af0bbf7af30b517, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1307931743 &6418180475301049370
+AudioRandomContainer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Sand
+  m_Volume: 0
+  m_Pitch: 0
+  m_AutomaticTriggerTime: 0
+  m_LoopCount: 1
+  m_VolumeRandomizationRange: {x: -2.0338917, y: 2.7118683}
+  m_PitchRandomizationRange: {x: -20.33908, y: 50.847534}
+  m_AutomaticTriggerTimeRandomizationRange: {x: 0, y: 0}
+  m_LoopCountRandomizationRange: {x: 0, y: 0}
+  m_Elements:
+  - {fileID: -8957772846237997671}
+  - {fileID: 3358971839293448806}
+  - {fileID: -7268590379982607492}
+  - {fileID: -2036343217344391881}
+  - {fileID: -2532783985069122554}
+  m_AvoidRepeatingLast: 2
+  m_PlaybackMode: 2
+  m_TriggerMode: 0
+  m_AutomaticTriggerMode: 1
+  m_LoopMode: 2
+  m_VolumeRandomizationEnabled: 1
+  m_PitchRandomizationEnabled: 1
+  m_AutomaticTriggerTimeRandomizationEnabled: 0
+  m_LoopCountRandomizationEnabled: 0

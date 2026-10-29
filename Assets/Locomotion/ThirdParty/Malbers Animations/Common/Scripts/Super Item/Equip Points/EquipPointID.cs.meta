@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 125ae0aa4b3bcaf4aacbe8bafadeee0a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 9dfdd0ec296caef41a1ff1a10e737231, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Super Item/Equip Points/EquipPointID.cs
+  uploadId: 1023146

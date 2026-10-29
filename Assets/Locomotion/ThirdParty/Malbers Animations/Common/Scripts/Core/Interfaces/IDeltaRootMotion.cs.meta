@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 652afc7a5a44add4c82137e49085df49
+timeCreated: 1522724266
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Core/Interfaces/IDeltaRootMotion.cs
+  uploadId: 1023146

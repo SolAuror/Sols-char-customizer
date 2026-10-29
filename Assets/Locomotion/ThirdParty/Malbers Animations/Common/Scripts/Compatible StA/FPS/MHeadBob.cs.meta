@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 71acd259afdb94b4e97a518d40796026
+timeCreated: 1501685551
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Compatible StA/FPS/MHeadBob.cs
+  uploadId: 1023146

@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 2e823c7f34013c64a86b527b0677900b
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Damage/Projectile Movement/Editor/ProjectileMovementMigrator.cs
+  uploadId: 1023146

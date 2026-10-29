@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 817c3b4d41927294db6837cea9ab6cbb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/IK/IK IDs/IK_Root.asset
+  uploadId: 1023146

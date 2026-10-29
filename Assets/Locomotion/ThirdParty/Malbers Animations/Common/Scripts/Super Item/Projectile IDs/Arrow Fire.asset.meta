@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d08316723c148394f8e6e962acd0a36f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Super Item/Projectile IDs/Arrow Fire.asset
+  uploadId: 1023146

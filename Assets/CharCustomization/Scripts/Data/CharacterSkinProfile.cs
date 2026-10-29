@@ -21,6 +21,8 @@ namespace Sol.CharacterCustomization
         public static readonly int PalmHemoglobinAdd = Shader.PropertyToID("_PalmHemoglobinAdd");
         public static readonly int BlushHemoglobinAdd = Shader.PropertyToID("_BlushHemoglobinAdd");
         public static readonly int AreolaMelaninScale = Shader.PropertyToID("_AreolaMelaninScale");
+        public static readonly int TattooMap = Shader.PropertyToID("_TattooMap");
+        public static readonly int TattooHighlight = Shader.PropertyToID("_TattooHighlight");
 
         public static bool IsSkinMaterial(Material material)
         {

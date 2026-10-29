@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 69512889c61515d468347ff2e8b146ba
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Particles/Materials/Slash.mat
+  uploadId: 1023146

@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 0d28118109a4a004ea7f53889baf6f50
+timeCreated: 1483632848
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Effects/StepTrigger.cs
+  uploadId: 1023146

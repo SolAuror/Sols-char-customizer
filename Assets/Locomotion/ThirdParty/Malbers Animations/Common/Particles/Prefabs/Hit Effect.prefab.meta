@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 400e06051701a8c4998087ae421728e3
+labels:
+- Effect
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Particles/Prefabs/Hit Effect.prefab
+  uploadId: 1023146

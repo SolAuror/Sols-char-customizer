@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 3dbde12724882e048a8dce4d52be4e63
+labels:
+- Effect
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Particles/Prefabs/Hit Effect Blood.prefab
+  uploadId: 1023146

@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Sol_F55_Cap
+  m_Shader: {fileID: 4800000, guid: 326cfdab61209224698d12d87b5d9fc2, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _SOL_HAIR_CAP
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 2e2407220a26c3a45afda40357e9ee22, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FlowMap:
+        m_Texture: {fileID: 2800000, guid: 3c7e42d307a45514eaf5070ae266cfb3, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HairData:
+        m_Texture: {fileID: 2800000, guid: c4bb6531cd76d8a47b89c4eb24f85d18, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaToMask: 0
+    - _BumpScale: 1
+    - _CardVariation: 0.25
+    - _Cull: 2
+    - _Cutoff: 0.35
+    - _DepthDarkening: 0.3
+    - _DiffuseWrap: 0.35
+    - _DstBlend: 0
+    - _Fringe: 0
+    - _FringeOpacity: 1
+    - _HighlightBreakup: 0.7
+    - _IsCap: 1
+    - _OcclusionStrength: 0.7
+    - _RootDarkening: 0.45
+    - _RootFade: 0.08
+    - _SecondaryExponent: 60
+    - _SecondaryShift: -0.2
+    - _ShiftJitter: 0.3
+    - _SideFade: 3
+    - _SpecularExponent: 280
+    - _SpecularShift: 0.1
+    - _SpecularStrength: 0.15
+    - _SpecularTint: 0.75
+    - _SrcBlend: 1
+    - _StrandVariation: 0.5
+    - _TipLightening: 0.1
+    - _ZWrite: 1
+    m_Colors:
+    - _BaseColor: {r: 0.27, g: 0.19, b: 0.12, a: 1}
+    - _SecondarySpecularColor: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -40,6 +40,19 @@ namespace Sol.CharacterCustomization
         public Camera GameplayCamera => gameplayCamera;
         public Behaviour GameplayController => gameplayController;
         public ICharacterPlayerSaveRepository Repository => repository;
+        public CharacterProfile Profile => profile;
+
+        // Optional gameplay modules register at runtime; the editor references no implementation.
+        public void RegisterGameplayHandoff(Behaviour controller, Camera camera)
+        {
+            if (controller != null && controller is not ICharacterGameplayHandoff)
+                throw new ArgumentException("Gameplay controller must implement ICharacterGameplayHandoff.");
+            gameplayController = controller;
+            gameplayCamera = camera;
+            if (controller is ICharacterGameplayHandoff handoff) handoff.SetGameplayInputEnabled(false);
+            if (controller) controller.enabled = false;
+            if (camera) { camera.enabled = false; SetAudioListenerEnabled(camera, false); }
+        }
 
         private void Awake()
         {
@@ -57,7 +70,7 @@ namespace Sol.CharacterCustomization
 
             if (gameplayController != null)
             {
-                if (gameplayController is DemoPlayerController demoPlayerController)
+                if (gameplayController is ICharacterGameplayHandoff demoPlayerController)
                 {
                     demoPlayerController.SetGameplayInputEnabled(false);
                 }
@@ -199,7 +212,7 @@ namespace Sol.CharacterCustomization
         {
             if (gameplayController != null)
             {
-                if (gameplayController is DemoPlayerController demoPlayerController)
+                if (gameplayController is ICharacterGameplayHandoff demoPlayerController)
                 {
                     demoPlayerController.SetGameplayInputEnabled(true);
                 }
@@ -224,7 +237,7 @@ namespace Sol.CharacterCustomization
         private bool HasCompleteHandoff(out string error)
         {
             error = null;
-            bool hasAnyHandoff = gameplayCamera != null || gameplayController != null;
+            bool hasAnyHandoff = gameplayController != null;
             if (!hasAnyHandoff)
             {
                 return false;
@@ -272,7 +285,7 @@ namespace Sol.CharacterCustomization
         private bool TryPrepareGameplayController(out string error)
         {
             error = null;
-            if (gameplayController is not DemoPlayerController demoPlayerController)
+            if (gameplayController is not ICharacterGameplayHandoff demoPlayerController)
             {
                 return true;
             }

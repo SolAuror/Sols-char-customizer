@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e0d2989fc8db01d41b4c1ae79bba109c
+timeCreated: 1535660290
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Assets/Events/Animal Controller/Set Jump.asset
+  uploadId: 1023146

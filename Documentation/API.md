@@ -344,7 +344,7 @@ At runtime:
 
 `CharacterTwistBoneDriver` drives limb twist bones that humanoid animation never animates because they are not mapped in the Avatar. The MPFB/Auto-Rig Pro characters skin part of each forearm, upper arm, thigh, and shin to `forearm_twist`, `arm_twist`, `thigh_twist`, and `leg_twist`; left at bind pose they candy-wrap the wrists and ankles.
 
-`CharacterMorphController` adds the driver to each character Animator in Play Mode when `ensureTwistBoneDrivers` is on (the default). It can also be added by hand, or with `Tools > Sol > Character Customization > Ensure Twist Bone Driver On Selected Animator`.
+`CharacterMorphController` adds the driver to each character Animator in Play Mode when `ensureTwistBoneDrivers` is on (the default). It can also be added by hand.
 
 | Member | Use |
 | --- | --- |

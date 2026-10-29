@@ -40,10 +40,17 @@ namespace Sol.CharacterCustomization.EditorTests
                 new HashSet<string> { CharacterCustomizationUiConfig.HairGroupId });
 
             Assert.That(without, Does.Not.Contain(CharacterCustomizationUiConfig.HairGroupId));
-            Assert.That(without.Count, Is.EqualTo(CharacterCustomizationUiConfig.TabGroups.Count - 1));
+            Assert.That(without, Does.Not.Contain(CharacterCustomizationUiConfig.TattooGroupId));
+            // Hair and Tattoos are both optional.
+            Assert.That(without.Count, Is.EqualTo(CharacterCustomizationUiConfig.TabGroups.Count - 2));
             Assert.That(with[2], Is.EqualTo(CharacterCustomizationUiConfig.HairGroupId));
             Assert.That(with[1], Is.EqualTo(CharacterCustomizationUiConfig.SkinGroupId));
             Assert.That(CharacterCustomizationUiConfig.IsKnownGroup(CharacterCustomizationUiConfig.HairGroupId), Is.True);
+
+            IReadOnlyList<string> both = CharacterCustomizationUiConfig.ExpectedTabs(
+                new HashSet<string> { CharacterCustomizationUiConfig.HairGroupId, CharacterCustomizationUiConfig.TattooGroupId });
+            Assert.That(both[3], Is.EqualTo(CharacterCustomizationUiConfig.TattooGroupId), "Tattoos sits after Hair");
+            Assert.That(CharacterCustomizationUiConfig.IsKnownGroup(CharacterCustomizationUiConfig.TattooGroupId), Is.True);
         }
 
         [Test]

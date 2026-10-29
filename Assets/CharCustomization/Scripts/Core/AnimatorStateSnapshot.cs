@@ -61,6 +61,7 @@ namespace Sol.CharacterCustomization
 
             foreach (ParameterState parameter in parameters)
             {
+                if (animator.IsParameterControlledByCurve(parameter.NameHash)) continue;
                 switch (parameter.Type)
                 {
                     case AnimatorControllerParameterType.Float:

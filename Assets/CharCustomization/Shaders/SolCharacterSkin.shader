@@ -47,6 +47,10 @@ Shader "Sol/Character Skin"
         _TransmissionStrength("Transmission Strength", Range(0, 2)) = 0
         _TransmissionDistortion("Transmission Distortion", Range(0, 1)) = 0.2
         _TransmissionPower("Transmission Power", Range(1, 16)) = 4
+
+        [Header(Tattoos)]
+        [NoScaleOffset] _TattooMap("Tattoo Layer (set by CharacterTattoos)", 2D) = "black" {}
+        [NoScaleOffset] _TattooHighlight("Tattoo Highlight (set by CharacterTattoos)", 2D) = "black" {}
     }
 
     SubShader

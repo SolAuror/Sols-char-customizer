@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4e19571717ff0e3488043d84b2078840
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: cfcda96b08ed0054298c737c6abac3c4, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Super Item/Conditions & Reactions/PouchManagerReaction.cs
+  uploadId: 1023146

@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 740c4374deddbba41a77b154e3a0c48f
+timeCreated: 1522698748
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 4845907150990230842, guid: 0000000000000000d000000000000000, type: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/AI/PointClickData.cs
+  uploadId: 1023146

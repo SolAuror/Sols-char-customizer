@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1a7b1845a7648f44395c35c06d8db1fc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Assets/Variables/Teleport Blink.asset
+  uploadId: 1023146

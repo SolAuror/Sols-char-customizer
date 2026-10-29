@@ -51,7 +51,7 @@ namespace Sol.CharacterCustomization
             }
 
             SkinnedMeshRenderer[] skinned = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            SkinnedMeshRenderer body = FindBody(skinned, table.Body);
+            SkinnedMeshRenderer body = FindBody(skinned, table);
             if (body == null)
             {
                 error = $"'{root.name}' has no skinned mesh to bind '{table.name}' to.";
@@ -482,9 +482,19 @@ namespace Sol.CharacterCustomization
             }
         }
 
-        private static SkinnedMeshRenderer FindBody(SkinnedMeshRenderer[] skinned, string bodyName)
+        // Prefabs often rename the body object (SK_Human_F becomes M_Human_F), and a
+        // hair groom can have more vertices than the body, so without a name match the
+        // body is the renderer skinned to the most of the table's bones, then the larger.
+        private static SkinnedMeshRenderer FindBody(SkinnedMeshRenderer[] skinned, CharacterJointOffsetTable table)
         {
-            SkinnedMeshRenderer largest = null;
+            var tableBones = new HashSet<string>(StringComparer.Ordinal);
+            foreach (CharacterJointOffsetTable.JointBone bone in table.Bones)
+            {
+                tableBones.Add(bone.Name);
+            }
+
+            SkinnedMeshRenderer best = null;
+            int bestBones = -1;
             foreach (SkinnedMeshRenderer renderer in skinned)
             {
                 if (renderer.sharedMesh == null)
@@ -492,18 +502,29 @@ namespace Sol.CharacterCustomization
                     continue;
                 }
 
-                if (!string.IsNullOrEmpty(bodyName) && string.Equals(renderer.name, bodyName, StringComparison.Ordinal))
+                if (!string.IsNullOrEmpty(table.Body) && string.Equals(renderer.name, table.Body, StringComparison.Ordinal))
                 {
                     return renderer;
                 }
 
-                if (largest == null || renderer.sharedMesh.vertexCount > largest.sharedMesh.vertexCount)
+                int bones = 0;
+                foreach (Transform bone in renderer.bones)
                 {
-                    largest = renderer;
+                    if (bone != null && tableBones.Contains(bone.name))
+                    {
+                        bones++;
+                    }
+                }
+
+                if (best == null || bones > bestBones ||
+                    (bones == bestBones && renderer.sharedMesh.vertexCount > best.sharedMesh.vertexCount))
+                {
+                    best = renderer;
+                    bestBones = bones;
                 }
             }
 
-            return largest;
+            return best;
         }
 
         private static bool TryFindBlendShape(

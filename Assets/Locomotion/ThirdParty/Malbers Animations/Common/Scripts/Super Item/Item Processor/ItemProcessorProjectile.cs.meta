@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d849b13b07aea2142b3c2c1ba0ee3db7
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Super Item/Item Processor/ItemProcessorProjectile.cs
+  uploadId: 1023146

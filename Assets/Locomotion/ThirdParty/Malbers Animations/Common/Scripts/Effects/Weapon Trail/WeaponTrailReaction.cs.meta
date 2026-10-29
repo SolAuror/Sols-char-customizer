@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: a3326d7a597cf71449ef601bcfea07d5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 8b5954985958a564eb1f8f266719ae6d, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Effects/Weapon Trail/WeaponTrailReaction.cs
+  uploadId: 1023146

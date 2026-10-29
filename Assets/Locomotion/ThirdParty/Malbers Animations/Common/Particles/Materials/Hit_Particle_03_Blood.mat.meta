@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 22d885ea3a188a2459dccd1d76dec240
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Particles/Materials/Hit_Particle_03_Blood.mat
+  uploadId: 1023146

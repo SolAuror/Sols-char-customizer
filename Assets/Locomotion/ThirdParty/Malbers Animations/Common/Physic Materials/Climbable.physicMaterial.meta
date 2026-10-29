@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f0ca59673c9e3c24185551bc54962834
+timeCreated: 1465246240
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Physic Materials/Climbable.physicMaterial
+  uploadId: 1023146

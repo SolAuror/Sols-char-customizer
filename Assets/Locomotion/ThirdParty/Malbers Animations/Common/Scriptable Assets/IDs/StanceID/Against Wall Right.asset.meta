@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b0f0ad2a9c24bb947944211d1b277f0c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scriptable Assets/IDs/StanceID/Against Wall Right.asset
+  uploadId: 1023146

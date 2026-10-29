@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6f93767cbcc78ca4c9af770a1b4fee02
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: c8cec27a3c5b8404dbe97c1fd3b45fb3, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Core/Tags/GetTagObject.cs
+  uploadId: 1023146

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 770f9c79b3c60ed4b8cbb96aa8bb801a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 20e908772ebda8943b13563dcaea828f, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/IK/IKSetLibrary.cs
+  uploadId: 1023146

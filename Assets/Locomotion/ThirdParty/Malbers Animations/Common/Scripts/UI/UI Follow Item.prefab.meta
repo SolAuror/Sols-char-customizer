@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8e43dbf28dd2d7f4296e1e4be931636b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/UI/UI Follow Item.prefab
+  uploadId: 1023146

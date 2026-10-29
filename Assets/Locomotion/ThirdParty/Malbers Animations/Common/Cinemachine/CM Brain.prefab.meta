@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7721b17458de7274da9fb6df12db1326
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Cinemachine/CM Brain.prefab
+  uploadId: 1023146

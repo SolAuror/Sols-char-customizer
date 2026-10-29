@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 82537ea1a2685ad4799a720774ec94d2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 871169feb360ee44e947c7740f2e1d05, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Local Vars/LocalVars.cs
+  uploadId: 1023146

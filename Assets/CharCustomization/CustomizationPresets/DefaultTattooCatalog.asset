@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8699cfc015545d94680cef1d9f823471, type: 3}
+  m_Name: DefaultTattooCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::Sol.CharacterCustomization.CharacterTattooCatalog
+  designs:
+  - id: bat
+    label: Bat
+    texture: {fileID: 2800000, guid: 1c76efd7c1b1a8e44b222deb44786689, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: castle
+    label: Castle
+    texture: {fileID: 2800000, guid: 0068efe9e05e1734ab1cee14bfdde233, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: cathedral
+    label: Cathedral
+    texture: {fileID: 2800000, guid: b269351ca0e3c3b4ca514045dd7b950b, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: cross-shield
+    label: Cross Shield
+    texture: {fileID: 2800000, guid: 9e3fcdc6f1d964c41af839c0db2c73d9, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: crown-skull
+    label: Crown Skull
+    texture: {fileID: 2800000, guid: 16790796c391d934389f3a058bb2cf4b, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: cthulhu
+    label: Cthulhu
+    texture: {fileID: 2800000, guid: 4a90567117aabbf48b7eaebb0a3b1fc0, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: dagger-skulls
+    label: Dagger Skulls
+    texture: {fileID: 2800000, guid: 5c554bf90bfbe0d4c9ba7e48d3d59eaa, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: dragon
+    label: Dragon
+    texture: {fileID: 2800000, guid: ff38bb5880017a0419c0487ebc6b4391, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: horned-helm
+    label: Horned Helm
+    texture: {fileID: 2800000, guid: 6c355727fcababb45b84f42f8fee833b, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: knight
+    label: Knight
+    texture: {fileID: 2800000, guid: 288cc9bc39e042e44b9bff2cf5d7d5dc, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: lion-shield
+    label: Lion Shield
+    texture: {fileID: 2800000, guid: c2f98e9240852ef43a56e7a4ecdd606b, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: moon-skull
+    label: Moon Skull
+    texture: {fileID: 2800000, guid: 0736e726d93958a4c94ec39cb8e1cc03, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: raven
+    label: Raven
+    texture: {fileID: 2800000, guid: 92c094e827efdb44d939316ec6a278e3, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: reaper
+    label: Reaper
+    texture: {fileID: 2800000, guid: 2670c3427b6740f4e920b785ee78fbe5, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: rose
+    label: Rose
+    texture: {fileID: 2800000, guid: d78657d2e0127e34cbc5ee6f97fd7021, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: rose-sword
+    label: Rose Sword
+    texture: {fileID: 2800000, guid: e696e4319a1bf3f47a806bd806057bd3, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: rune-eye
+    label: Rune Eye
+    texture: {fileID: 2800000, guid: 8e3db97707dc70a4a9c1f0aa3edf7c7d, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: rune-tentacles
+    label: Rune Tentacles
+    texture: {fileID: 2800000, guid: c10270d4c3c3edb43a8565a8c8ce1e2b, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: wizard
+    label: Wizard
+    texture: {fileID: 2800000, guid: 16baa8420691de74b88514ca3a68bb3d, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}
+  - id: wolf
+    label: Wolf
+    texture: {fileID: 2800000, guid: d5d793eb2d27452428d87d583e889caa, type: 3}
+    tintable: 1
+    defaultSize: {x: 0.11, y: 0.11}

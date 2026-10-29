@@ -184,6 +184,45 @@ namespace Sol.CharacterCustomization.EditorTests
             Assert.That(shared == null, Is.True, "The last user releases the shared copy.");
         }
 
+        // Prefabs rename the body object (SK_Human_F becomes M_Human_F), and a hair
+        // groom skinned to the head can have more vertices than the body.
+        [Test]
+        public void RenamedBodyIsFoundBesideLargerHair()
+        {
+            humanoid = SyntheticHumanoid.Create();
+            CharacterJointOffsetTable table = BuildBody(("Reach+", new Dictionary<string, Vector3>
+            {
+                { "LeftLowerArm", new Vector3(-0.02f, 0f, 0f) }
+            }));
+            body.gameObject.name = "M_Body";
+
+            var hairObject = new GameObject("Hair");
+            hairObject.transform.SetParent(humanoid.Root.transform, false);
+            var hair = hairObject.AddComponent<SkinnedMeshRenderer>();
+            Transform head = humanoid.Find("Head");
+            var hairMesh = new Mesh { name = "Hair" };
+            created.Add(hairMesh);
+            hairMesh.vertices = new Vector3[8];
+            hairMesh.triangles = new[] { 0, 1, 2, 3, 4, 5, 5, 6, 7 };
+            hairMesh.bindposes = new[] { head.worldToLocalMatrix * hairObject.transform.localToWorldMatrix };
+            hair.bones = new[] { head };
+            hair.sharedMesh = hairMesh;
+
+            var manager = new GameObject("Joint Offset Driver");
+            created.Add(manager);
+            var driver = manager.AddComponent<CharacterRigProportionDriver>();
+            drivers.Add(driver);
+            driver.Bind(humanoid.Root.transform, humanoid.Animator, table);
+
+            Assert.That(driver.JointOffsets, Is.Not.Null, "The binding chose the hair as the body.");
+            Transform lowerArm = humanoid.Find("LeftLowerArm");
+            Vector3 bind = lowerArm.localPosition;
+            SetWeight("Reach+", 100f);
+            driver.MarkJointOffsetsDirty();
+            driver.ApplyNow();
+            Assert.That((lowerArm.localPosition - (bind + new Vector3(-0.02f, 0f, 0f))).magnitude, Is.LessThan(Tolerance));
+        }
+
         [Test]
         public void UnbindingRestoresMeshAndBones()
         {

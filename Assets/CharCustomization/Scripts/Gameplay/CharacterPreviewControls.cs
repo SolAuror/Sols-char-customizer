@@ -44,9 +44,18 @@ namespace Sol.CharacterCustomization
         private readonly List<RaycastResult> interfaceHits = new();
         private Transform cachedBoundsRoot;
         private Renderer[] cachedBoundsRenderers = Array.Empty<Renderer>();
+        private int claimedFrame = -1;
 
         public Camera PreviewCamera => previewCamera;
         public bool IsBlending => isBlending;
+
+        // Another tool, such as the tattoo picker, uses the mouse on the character this
+        // frame: dragging does not turn the character and scrolling does not zoom. Claim
+        // before this component's Update runs (an earlier script execution order).
+        public void ClaimPointerThisFrame()
+        {
+            claimedFrame = Time.frameCount;
+        }
 
         private void Awake()
         {
@@ -78,7 +87,7 @@ namespace Sol.CharacterCustomization
         {
             Mouse mouse = Mouse.current;
             if (!initialized || !customizationInputEnabled || isBlending || mouse == null ||
-                IsPointerOverInterface(mouse.position.ReadValue()))
+                claimedFrame == Time.frameCount || IsPointerOverInterface(mouse.position.ReadValue()))
             {
                 return;
             }
@@ -288,7 +297,7 @@ namespace Sol.CharacterCustomization
             return targetFocusPoint - horizontalOffset - verticalOffset;
         }
 
-        private bool IsPointerOverInterface(Vector2 pointerPosition)
+        public bool IsPointerOverInterface(Vector2 pointerPosition)
         {
             EventSystem eventSystem = EventSystem.current;
             if (eventSystem == null)

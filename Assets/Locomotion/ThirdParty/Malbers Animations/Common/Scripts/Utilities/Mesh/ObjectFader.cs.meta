@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 266c4cd70da74fb458a0a4210ad3600b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 15100
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Utilities/Mesh/ObjectFader.cs
+  uploadId: 1023146

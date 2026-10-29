@@ -42,6 +42,10 @@ namespace Sol.CharacterCustomization
         [Tooltip("Chooses and colours the hairstyle; recipes save and restore it. Empty uses one on this object.")]
         [SerializeField] private CharacterHair hair;
 
+        [Header("Tattoos")]
+        [Tooltip("Composites tattoos into the skin. Empty uses one on this object.")]
+        [SerializeField] private CharacterTattoos tattoos;
+
         private MaterialPropertyBlock propertyBlock;
         private int[] skinColorPropertyIds;
         private int[] skinRoughnessPropertyIds;
@@ -63,6 +67,7 @@ namespace Sol.CharacterCustomization
 
         public CharacterMorphController Controller => controller;
         public CharacterHair Hair => hair;
+        public CharacterTattoos Tattoos => tattoos;
         public CharacterSkinPalette SkinPalette => skinPalette;
         public CharacterEyeMaterialPalette EyePalette => eyePalette;
         public string SkinToneId => skinToneId;
@@ -89,6 +94,19 @@ namespace Sol.CharacterCustomization
             if (hair == null)
             {
                 hair = GetComponent<CharacterHair>();
+            }
+
+            if (tattoos == null)
+            {
+                tattoos = GetComponent<CharacterTattoos>();
+            }
+
+            if (tattoos != null)
+            {
+                // The layer texture is created once tattoos exist and kept across
+                // rebuilds, so the skin only needs it again when it is created or
+                // released.
+                tattoos.LayerChanged += ApplySkin;
             }
 
             CacheSkinPropertyIds();
@@ -174,6 +192,11 @@ namespace Sol.CharacterCustomization
                 recipe.SetHair(hair.StyleId, hair.Color, hair.Sheen);
             }
 
+            if (tattoos != null)
+            {
+                recipe.SetTattoos(tattoos.Placements);
+            }
+
             return recipe;
         }
 
@@ -221,6 +244,13 @@ namespace Sol.CharacterCustomization
                 hair.SetStyle(recipe.HairStyleId);
                 hair.SetColor(recipe.HairColor);
                 hair.SetSheen(recipe.HairSheen);
+            }
+
+            // A recipe is a whole look: one without tattoos, including those saved before
+            // version 5, clears the current ones rather than leaving them on another body.
+            if (tattoos != null)
+            {
+                tattoos.SetPlacements(recipe.HasTattoos ? recipe.Tattoos : null);
             }
 
             return true;
@@ -347,6 +377,9 @@ namespace Sol.CharacterCustomization
                     hair.SetColor(option.Color);
                 }
             }
+
+            // Tattoos placed for the previous body would sit oddly on the new one.
+            tattoos?.ClearPlacements();
         }
 
         public void RefreshSkin()
@@ -428,6 +461,8 @@ namespace Sol.CharacterCustomization
 
             CacheSkinPropertyIds();
             float roughnessPropertyValue = invertRoughnessForSmoothness ? 1f - skinRoughness : skinRoughness;
+            Texture tattooLayer = ResolveTattooLayer();
+            Texture tattooHighlight = ResolveTattooHighlight();
             foreach (Renderer targetRenderer in renderers)
             {
                 if (targetRenderer == null)
@@ -439,7 +474,7 @@ namespace Sol.CharacterCustomization
                 {
                     foreach (Material instance in instances)
                     {
-                        ApplySkinMaterial(instance, roughnessPropertyValue, colourSpace);
+                        ApplySkinMaterial(instance, roughnessPropertyValue, colourSpace, tattooLayer, tattooHighlight);
                     }
 
                     continue;
@@ -461,6 +496,8 @@ namespace Sol.CharacterCustomization
                 propertyBlock.SetFloat(SolSkinShaderIds.Melanin, skinParameters.Melanin);
                 propertyBlock.SetFloat(SolSkinShaderIds.Hemoglobin, skinParameters.Hemoglobin);
                 propertyBlock.SetFloat(SolSkinShaderIds.Undertone, skinParameters.Undertone);
+                propertyBlock.SetTexture(SolSkinShaderIds.TattooMap, tattooLayer);
+                propertyBlock.SetTexture(SolSkinShaderIds.TattooHighlight, tattooHighlight);
                 if (colourSpace != null)
                 {
                     colourSpace.ApplyTo(propertyBlock);
@@ -471,11 +508,18 @@ namespace Sol.CharacterCustomization
             }
         }
 
-        private void ApplySkinMaterial(Material material, float roughnessPropertyValue, CharacterSkinProfile colourSpace)
+        private void ApplySkinMaterial(
+            Material material,
+            float roughnessPropertyValue,
+            CharacterSkinProfile colourSpace,
+            Texture tattooLayer,
+            Texture tattooHighlight)
         {
             material.SetFloat(SolSkinShaderIds.Melanin, skinParameters.Melanin);
             material.SetFloat(SolSkinShaderIds.Hemoglobin, skinParameters.Hemoglobin);
             material.SetFloat(SolSkinShaderIds.Undertone, skinParameters.Undertone);
+            material.SetTexture(SolSkinShaderIds.TattooMap, tattooLayer);
+            material.SetTexture(SolSkinShaderIds.TattooHighlight, tattooHighlight);
             foreach (int propertyId in skinRoughnessPropertyIds)
             {
                 if (material.HasProperty(propertyId))
@@ -488,6 +532,18 @@ namespace Sol.CharacterCustomization
             {
                 colourSpace.ApplyTo(material);
             }
+        }
+
+        // Both sexes' skin gets the active character's layer; only the shown one is
+        // drawn, and the layer is rebuilt for the other mesh when the sex changes.
+        private Texture ResolveTattooLayer()
+        {
+            return tattoos != null && tattoos.Layer != null ? tattoos.Layer : CharacterTattoos.EmptyLayer;
+        }
+
+        private Texture ResolveTattooHighlight()
+        {
+            return tattoos != null && tattoos.Highlight != null ? tattoos.Highlight : CharacterTattoos.EmptyLayer;
         }
 
         // Replaces each Sol/Character Skin material on the renderer with a
@@ -534,6 +590,11 @@ namespace Sol.CharacterCustomization
 
         private void OnDestroy()
         {
+            if (tattoos != null)
+            {
+                tattoos.LayerChanged -= ApplySkin;
+            }
+
             foreach (KeyValuePair<Renderer, Material[]> entry in skinMaterialInstances)
             {
                 // A character that outlives its profile, such as after the host game

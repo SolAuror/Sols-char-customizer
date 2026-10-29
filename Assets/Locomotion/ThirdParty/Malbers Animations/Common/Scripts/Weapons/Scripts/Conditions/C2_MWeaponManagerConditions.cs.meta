@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d5cdef3c694efe54bb6e479d2fc5abd7
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2800000, guid: 8aa3190d0d87a1d499cd7aeaece788c8, type: 3}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Weapons/Scripts/Conditions/C2_MWeaponManagerConditions.cs
+  uploadId: 1023146

@@ -1,0 +1,571 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5742624148959299881
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5742624148959299887}
+  - component: {fileID: 2484517237255141909}
+  - component: {fileID: 8383783181839100306}
+  - component: {fileID: 187041515348285906}
+  - component: {fileID: 5742624148959299884}
+  - component: {fileID: 796896709585359179}
+  m_Layer: 0
+  m_Name: CM Lock On Target
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5742624148959299887
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5742624148959299881}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6842213371915520102}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2484517237255141909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5742624148959299881}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Priority:
+    Enabled: 1
+    m_Value: 20
+  OutputChannel: 1
+  StandbyUpdate: 0
+  m_StreamingVersion: 20241001
+  m_LegacyPriority: 0
+  Target:
+    TrackingTarget: {fileID: 6842213371915520102}
+    LookAtTarget: {fileID: 6842213371915520105}
+    CustomLookAtTarget: 1
+  Lens:
+    FieldOfView: 38
+    OrthographicSize: 10
+    NearClipPlane: 0.1
+    FarClipPlane: 5000
+    Dutch: 0
+    ModeOverride: 0
+    PhysicalProperties:
+      GateFit: 2
+      SensorSize: {x: 1, y: 1}
+      LensShift: {x: 0, y: 0}
+      FocusDistance: 10
+      Iso: 200
+      ShutterSpeed: 0.005
+      Aperture: 16
+      BladeCount: 5
+      Curvature: {x: 2, y: 11}
+      BarrelClipping: 0.25
+      Anamorphism: 0
+  BlendHint: 10
+--- !u!114 &8383783181839100306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5742624148959299881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 625c14eee3ad46c99df7c7c891ef668a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Damping: {x: 0.1, y: 0.2, z: 0.1}
+  ShoulderOffset: {x: 3, y: 1, z: 0}
+  VerticalArmLength: 0.4
+  CameraSide: 1
+  CameraDistance: 6
+  AvoidObstacles:
+    Enabled: 1
+    CollisionFilter:
+      serializedVersion: 2
+      m_Bits: 1
+    IgnoreTag: Player
+    CameraRadius: 0.2
+    DampingIntoCollision: 0
+    DampingFromCollision: 2
+--- !u!114 &187041515348285906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5742624148959299881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e8b78ac948f05a46a6d8339a503172b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LookAtOffset: {x: 0.3, y: 0.2, z: 0}
+--- !u!114 &5742624148959299884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5742624148959299881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41eb9c17bc0693d448a412425a2d17b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Events:
+  - Event: {fileID: 11400000, guid: 774c7acaf3bb1304fb314cd4bd618fcb, type: 2}
+    active: 1
+    ignoreOwnerFilter: 0
+    useInt: 0
+    useFloat: 0
+    useVoid: 0
+    useString: 0
+    useBool: 0
+    useGO: 0
+    useTransform: 1
+    useVector3: 0
+    useVector2: 0
+    useComponent: 0
+    useSprite: 0
+    useSender: 0
+    Response:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseNull:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseSender:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseInt:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseBool:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseBoolFalse:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseBoolTrue:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseString:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseGO:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseGOasT:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseTransform:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 6842213371915520103}
+          m_TargetAssemblyTypeName: MalbersAnimations.LockOnCameraPivot, MalbersAnimations.Cinemachine
+          m_MethodName: SetFollow
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    ResponseComponent:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseSprite:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    IntEventList: []
+    FloatEventList: []
+    AdvancedInteger: 0
+    AdvancedFloat: 0
+    AdvancedBool: 0
+    InvertBool: 0
+    multiplier:
+      UseConstant: 1
+      UseMember: 0
+      Member:
+        target: {fileID: 0}
+        memberName: 
+        memberKind: 0
+        args: []
+        paramSignature: 
+        invert: 0
+      ConstantValue: 1
+      Variable: {fileID: 0}
+  - Event: {fileID: 11400000, guid: 2a60c9d3a0ea68e47b30753459e3042b, type: 2}
+    active: 1
+    ignoreOwnerFilter: 0
+    useInt: 0
+    useFloat: 0
+    useVoid: 0
+    useString: 0
+    useBool: 0
+    useGO: 0
+    useTransform: 1
+    useVector3: 0
+    useVector2: 0
+    useComponent: 0
+    useSprite: 0
+    useSender: 0
+    Response:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseNull:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 2484517237255141909}
+          m_TargetAssemblyTypeName: UnityEngine.Behaviour, UnityEngine
+          m_MethodName: set_enabled
+          m_Mode: 6
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: -1
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    ResponseSender:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseFloat:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseInt:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseBool:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseBoolFalse:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseBoolTrue:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseString:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseGO:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseGOasT:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseTransform:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 6842213371915520103}
+          m_TargetAssemblyTypeName: MalbersAnimations.LockOnCameraPivot, MalbersAnimations.Cinemachine
+          m_MethodName: SetTarget
+          m_Mode: 0
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+        - m_Target: {fileID: 2484517237255141909}
+          m_TargetAssemblyTypeName: UnityEngine.Behaviour, UnityEngine
+          m_MethodName: set_enabled
+          m_Mode: 6
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 20
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 1
+          m_CallState: 2
+    ResponseComponent:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseSprite:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseVector3:
+      m_PersistentCalls:
+        m_Calls: []
+    ResponseVector2:
+      m_PersistentCalls:
+        m_Calls: []
+    IntEventList: []
+    FloatEventList: []
+    AdvancedInteger: 0
+    AdvancedFloat: 0
+    AdvancedBool: 0
+    InvertBool: 0
+    multiplier:
+      UseConstant: 1
+      UseMember: 0
+      Member:
+        target: {fileID: 0}
+        memberName: 
+        memberKind: 0
+        args: []
+        paramSignature: 
+        invert: 0
+      ConstantValue: 1
+      Variable: {fileID: 0}
+  ShowEvents: 1
+  SelectedEvent: 0
+  FilterMode: 0
+  OwnerFilter:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: {fileID: 0}
+    Variable: {fileID: 0}
+  MatchHierarchy: 1
+--- !u!114 &796896709585359179
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5742624148959299881}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f76d83b6c062f4449adc7d400e24174d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowEvents: 0
+  ID:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  Auto: 1
+  InvokeOnEnable: 1
+  Description: 
+  ShowDescription: 0
+  debug: 0
+  value:
+    UseConstant: 0
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: {fileID: 0}
+    Variable: {fileID: 11400000, guid: e759cb94eee3fcd4bb2f749b1dbda0a8, type: 2}
+  OnValueChanged:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 6842213371915520103}
+        m_TargetAssemblyTypeName: MalbersAnimations.LockOnCameraPivot, MalbersAnimations.Cinemachine
+        m_MethodName: SetFollow
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnValueNull:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!1 &6842213371915520101
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6842213371915520102}
+  - component: {fileID: 6842213371915520103}
+  m_Layer: 0
+  m_Name: Lock On Pivot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6842213371915520102
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6842213371915520101}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6842213371915520105}
+  m_Father: {fileID: 5742624148959299887}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6842213371915520103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6842213371915520101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7028e5253c1e46e3b71174906a802460, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Follow:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: {fileID: 0}
+    Variable: {fileID: 0}
+  Target:
+    UseConstant: 0
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: {fileID: 0}
+    Variable: {fileID: 11400000, guid: a53f41947a81d0e43a2abf9c2e87a2bc, type: 2}
+  AimPoint: {fileID: 6842213371915520105}
+  AimPointBias:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: 0.5
+    Variable: {fileID: 0}
+  AimPointHeight:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: 0
+    Variable: {fileID: 0}
+  RotationSmoothTime:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: 0.15
+    Variable: {fileID: 0}
+  OnlyYaw:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: 1
+    Variable: {fileID: 0}
+  DetachOnAwake: 1
+  Brain: {fileID: 0}
+--- !u!1 &6842213371915520104
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6842213371915520105}
+  m_Layer: 0
+  m_Name: Lock On Aim Point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6842213371915520105
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6842213371915520104}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6842213371915520102}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

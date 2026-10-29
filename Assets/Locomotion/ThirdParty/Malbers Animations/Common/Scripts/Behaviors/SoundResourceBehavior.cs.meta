@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 5ab6dee326c53f64e9eb12256ba92c78
+timeCreated: 1479742744
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 475581496394372984, guid: 0000000000000000d000000000000000, type: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Behaviors/SoundResourceBehavior.cs
+  uploadId: 1023146

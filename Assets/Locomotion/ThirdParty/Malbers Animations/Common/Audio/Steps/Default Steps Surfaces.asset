@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6eda50d2c9c36a4eb2c51458edd100e, type: 3}
+  m_Name: Default Steps Surfaces
+  m_EditorClassIdentifier: 
+  DefaultSound:
+    UseConstant: 1
+    UseMember: 0
+    Member:
+      target: {fileID: 0}
+      memberName: 
+      memberKind: 0
+      args: []
+      paramSignature: 
+      invert: 0
+    ConstantValue: {fileID: 6418180475301049370, guid: 9c984217dbe26d942a42ae4749c200b8,
+      type: 2}
+    Variable: {fileID: 0}
+  Surfaces:
+  - name: Grass
+    surface: {fileID: 11400000, guid: d50a95cc10a938549b551c511601f542, type: 2}
+    textures: []
+    sound: {fileID: 6418180475301049370, guid: 017c8839438f27242bc2f8473a207d0a, type: 2}
+    TrackMode: 0
+    TrackOverride: {fileID: 0}
+    DustMode: 1
+    DustOverride: {fileID: 0}
+  - name: Wood
+    surface: {fileID: 11400000, guid: b9a234bf44c728046bdef6636bc8c05d, type: 2}
+    textures: []
+    sound: {fileID: 6418180475301049370, guid: d5690458e9e48484d99b38aebc3bbe8d, type: 2}
+    TrackMode: 0
+    TrackOverride: {fileID: 0}
+    DustMode: 1
+    DustOverride: {fileID: 0}
+  - name: Water
+    surface: {fileID: 11400000, guid: 355f298f73b89594fa14acf49984d57e, type: 2}
+    textures: []
+    sound: {fileID: 6418180475301049370, guid: bb3ca9f42c447b5459aa5356aaf8c125, type: 2}
+    TrackMode: 0
+    TrackOverride: {fileID: 0}
+    DustMode: 1
+    DustOverride: {fileID: 0}
+  - name: Snow
+    surface: {fileID: 11400000, guid: d56aa68d483bcbd48979a9d6fedeaad4, type: 2}
+    textures: []
+    sound: {fileID: 6418180475301049370, guid: e12dd391ad8d1624fa2a1c479caa1b2f, type: 2}
+    TrackMode: 0
+    TrackOverride: {fileID: 0}
+    DustMode: 2
+    DustOverride: {fileID: 4372615284866616589, guid: 2f23251790968e5418da2329d6dc1956,
+      type: 3}

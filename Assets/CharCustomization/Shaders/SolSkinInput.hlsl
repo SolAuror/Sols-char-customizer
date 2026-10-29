@@ -48,6 +48,13 @@ TEXTURE2D(_SkinRegionMap);
 SAMPLER(sampler_SkinRegionMap);
 TEXTURE2D(_SkinUtilityMap);
 SAMPLER(sampler_SkinUtilityMap);
+// Premultiplied ink colour and coverage, composited per character by CharacterTattoos.
+TEXTURE2D(_TattooMap);
+SAMPLER(sampler_TattooMap);
+// The tattoo being edited, outlined by CharacterTattoos; black otherwise.
+TEXTURE2D(_TattooHighlight);
+SAMPLER(sampler_TattooHighlight);
+static const half3 SolTattooHighlightColor = half3(0.1h, 0.75h, 1.0h);
 
 
 struct SolSkinSurface
@@ -141,6 +148,29 @@ SolSkinSurface SampleSolSkinSurface(float2 uv)
         + regions.g * _PalmHemoglobinAdd
         + regions.b * _BlushHemoglobinAdd;
     surface.albedo = saturate(SampleSkinColor(melanin, hemoglobin, _Undertone) * detail);
+
+    // Tattoo ink sits in the dermis, under the epidermal melanin, so it is seen
+    // through the same melanin as the skin around it: the ink colour is filtered by
+    // this skin's melanin-only colour over unpigmented skin, which darkens and mutes
+    // it on deep skin as real ink is. Pores still show through it.
+    half4 ink = SAMPLE_TEXTURE2D(_TattooMap, sampler_TattooMap, uv);
+    UNITY_BRANCH
+    if (ink.a > 0.002h)
+    {
+        half3 unpigmented = max(SampleSkinColor(0.0h, 0.0h, _Undertone), half3(0.001h, 0.001h, 0.001h));
+        half3 epidermis = SampleSkinColor(melanin, 0.0h, _Undertone) / unpigmented;
+        half3 inkColor = ink.rgb / ink.a;
+        surface.albedo = lerp(surface.albedo, saturate(inkColor * epidermis * luminanceRatio), ink.a);
+    }
+
+    // Pulses, so the selection stands out from ink of any colour.
+    half highlight = SAMPLE_TEXTURE2D(_TattooHighlight, sampler_TattooHighlight, uv).r;
+    UNITY_BRANCH
+    if (highlight > 0.002h)
+    {
+        half pulse = 0.75h + 0.25h * sin(_Time.y * 5.0);
+        surface.albedo = lerp(surface.albedo, SolTattooHighlightColor, highlight * pulse);
+    }
 
     surface.normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, uv), _BumpScale);
 

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5c58f4e488f6fec40a4c0ea6db0d6e74
+timeCreated: 1483637705
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Prefabs/Tracks/Human Track.mat
+  uploadId: 1023146

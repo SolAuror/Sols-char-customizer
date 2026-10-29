@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1233149941 &-7120530467890856278
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Grass03_{-7120530467890856278}
+  m_AudioClip: {fileID: 8300000, guid: de6dde337dbbeb6438e82bf56f61b06f, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &-1520638385338046311
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Grass04_{-1520638385338046311}
+  m_AudioClip: {fileID: 8300000, guid: 858458a4bc718014b81698ed19d583c7, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &719908480243794614
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Grass01_{719908480243794614}
+  m_AudioClip: {fileID: 8300000, guid: ca64877d8b8bf7c4492f150b73a68b1f, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1307931743 &6418180475301049370
+AudioRandomContainer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Grass_Steps
+  m_Volume: 0
+  m_Pitch: 0
+  m_AutomaticTriggerTime: 0
+  m_LoopCount: 1
+  m_VolumeRandomizationRange: {x: -2.0338917, y: 2.7118683}
+  m_PitchRandomizationRange: {x: -20.33908, y: 50.847534}
+  m_AutomaticTriggerTimeRandomizationRange: {x: 0, y: 0}
+  m_LoopCountRandomizationRange: {x: 0, y: 0}
+  m_Elements:
+  - {fileID: 719908480243794614}
+  - {fileID: 7346735482539483495}
+  - {fileID: -7120530467890856278}
+  - {fileID: -1520638385338046311}
+  m_AvoidRepeatingLast: 1
+  m_PlaybackMode: 2
+  m_TriggerMode: 0
+  m_AutomaticTriggerMode: 1
+  m_LoopMode: 2
+  m_VolumeRandomizationEnabled: 1
+  m_PitchRandomizationEnabled: 1
+  m_AutomaticTriggerTimeRandomizationEnabled: 0
+  m_LoopCountRandomizationEnabled: 0
+--- !u!1233149941 &7346735482539483495
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: H_Step_Grass02_{7346735482539483495}
+  m_AudioClip: {fileID: 8300000, guid: c1a35484f76d1064e8a1a2a7eff534bc, type: 3}
+  m_Volume: 0
+  m_Enabled: 1

@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: 8a9804e9ad9c75e44bceb770dcc1e2d4
+MonoImporter:
+  icon: {fileID: 2800000, guid: 8b5954985958a564eb1f8f266719ae6d, type: 3}
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Animal Controller/ComboSet.cs
+  uploadId: 1023146

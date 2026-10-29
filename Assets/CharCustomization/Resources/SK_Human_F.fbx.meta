@@ -7,33 +7,33 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Human_Eyelash
+      name: M_Human_F_Eyebrows
+    second: {fileID: 2100000, guid: d27fd3cc1d12ef6479ba8adb4feb9e1d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Human_F_Eyelashes
     second: {fileID: 2100000, guid: 848cdbd3549caa44587916b465a22676, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Human_F.low-poly.001
+      name: M_Human_F_Eyes
     second: {fileID: 2100000, guid: f911e5ab38e6ecd41b2e456d4a0b9fd6, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Human_F.teeth_base.001
-    second: {fileID: 2100000, guid: 1b8c011aa5d3b344181dc9b299cb8402, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Human_F.tongue01.001
-    second: {fileID: 2100000, guid: 2930e242ac071a245b782e777407ea06, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Human_F_Body.001
+      name: M_Human_F_Skin
     second: {fileID: 2100000, guid: 9e2d7d69b9f59724b98c3627a1ca0a4f, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Human_eyebrow
-    second: {fileID: 2100000, guid: d27fd3cc1d12ef6479ba8adb4feb9e1d, type: 2}
+      name: M_Human_F_Teeth
+    second: {fileID: 2100000, guid: 1b8c011aa5d3b344181dc9b299cb8402, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Human_F_Tongue
+    second: {fileID: 2100000, guid: 2930e242ac071a245b782e777407ea06, type: 2}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule

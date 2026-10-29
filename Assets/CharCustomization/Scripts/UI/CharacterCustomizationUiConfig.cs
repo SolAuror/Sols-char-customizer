@@ -9,6 +9,7 @@ namespace Sol.CharacterCustomization
         public const string PresetsGroupId = "Presets";
         public const string SkinGroupId = "Skin";
         public const string HairGroupId = "Hair";
+        public const string TattooGroupId = "Tattoos";
         public const string DefaultMorphGroupId = "Body";
         public const CharacterSex DefaultSex = CharacterSex.Female;
 
@@ -19,12 +20,12 @@ namespace Sol.CharacterCustomization
 
         private static readonly string[] TabGroupIds =
         {
-            PresetsGroupId, SkinGroupId, HairGroupId, "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
+            PresetsGroupId, SkinGroupId, HairGroupId, TattooGroupId, "Body", "Jaw / Chin", "Mouth", "Nose", "Cheeks", "Eyes", "Brows", "Neck / Ears"
         };
 
         // Tabs a menu may leave out; the rest keep their order without them. The hair
-        // tab is added to an existing menu by Hair Setup's Build Hair Tab.
-        private static readonly string[] OptionalTabGroupIds = { HairGroupId };
+        // and tattoo tabs are added to an existing menu by their Build ... Tab tools.
+        private static readonly string[] OptionalTabGroupIds = { HairGroupId, TattooGroupId };
 
         public static IReadOnlyList<string> MorphGroups => MorphGroupIds;
         public static IReadOnlyList<string> TabGroups => TabGroupIds;
@@ -57,6 +58,11 @@ namespace Sol.CharacterCustomization
             return string.Equals(groupId, HairGroupId, StringComparison.Ordinal);
         }
 
+        public static bool IsTattooGroup(string groupId)
+        {
+            return string.Equals(groupId, TattooGroupId, StringComparison.Ordinal);
+        }
+
         public static bool IsMorphGroup(string groupId)
         {
             return MorphGroupIds.Contains(groupId, StringComparer.Ordinal);
@@ -64,7 +70,7 @@ namespace Sol.CharacterCustomization
 
         public static bool IsKnownGroup(string groupId)
         {
-            return IsPresetGroup(groupId) || IsSkinGroup(groupId) || IsHairGroup(groupId) || IsMorphGroup(groupId);
+            return IsPresetGroup(groupId) || IsSkinGroup(groupId) || IsHairGroup(groupId) || IsTattooGroup(groupId) || IsMorphGroup(groupId);
         }
     }
 }

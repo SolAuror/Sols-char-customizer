@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 37fa05b945e804c438dfbdb2a5606d44
+timeCreated: 1559166774
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {fileID: 2022702399471630698, guid: 0000000000000000d000000000000000, type: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Scriptables/SurfaceEffects.cs
+  uploadId: 1023146

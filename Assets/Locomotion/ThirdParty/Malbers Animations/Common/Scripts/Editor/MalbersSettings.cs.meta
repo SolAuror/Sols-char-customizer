@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: a9312ba4d38fc2f4c9681a30b9bf6cbe
+timeCreated: 1463758946
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/Editor/MalbersSettings.cs
+  uploadId: 1023146

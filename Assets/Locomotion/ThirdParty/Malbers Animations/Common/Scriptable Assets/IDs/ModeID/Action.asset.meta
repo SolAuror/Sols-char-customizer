@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4dc5ca673dc60d346a62529c8a9bd8ff
+labels:
+- ID
+- Variables
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scriptable Assets/IDs/ModeID/Action.asset
+  uploadId: 1023146

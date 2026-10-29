@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: de2d0ec684288bf4991c5760679163b3
+timeCreated: 1534526804
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Assets/Events/Weapons/WM Aim.asset
+  uploadId: 1023146

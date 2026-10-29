@@ -53,6 +53,9 @@ namespace Sol.CharacterCustomization
         [Tooltip("Shown on the Hair tab. Optional: menus without a Hair tab leave it empty.")]
         [SerializeField] private GameObject hairPanel;
         [SerializeField] private CharacterHairPicker hairPicker;
+        [Tooltip("Shown on the Tattoos tab. Optional: menus without a Tattoos tab leave it empty.")]
+        [SerializeField] private GameObject tattooPanel;
+        [SerializeField] private CharacterTattooPicker tattooPicker;
         [SerializeField] private GameObject eyeColorGrid;
         [SerializeField] private CharacterEyeSwatchButton[] eyeSwatches = Array.Empty<CharacterEyeSwatchButton>();
         [SerializeField] private GameObject bodyTypeHeading;
@@ -1152,6 +1155,12 @@ namespace Sol.CharacterCustomization
 
         private void SelectSex(CharacterSex sex)
         {
+            // Tattoos are placed on one body's skin and mean nothing on the other's.
+            if (sex != controller.ActiveSex)
+            {
+                profile?.Tattoos?.ClearPlacements();
+            }
+
             controller.SetSex(sex);
             profile.RefreshSkin();
             RefreshPanel();
@@ -1176,6 +1185,16 @@ namespace Sol.CharacterCustomization
                 if (hairPicker != null)
                 {
                     hairPicker.ResetToDefault();
+                }
+
+                return;
+            }
+
+            if (CharacterCustomizationUiConfig.IsTattooGroup(selectedGroup))
+            {
+                if (tattooPicker != null)
+                {
+                    tattooPicker.ResetToDefault();
                 }
 
                 return;
@@ -1373,10 +1392,16 @@ namespace Sol.CharacterCustomization
             bool showingPresets = CharacterCustomizationUiConfig.IsPresetGroup(selectedGroup);
             bool showingSkin = CharacterCustomizationUiConfig.IsSkinGroup(selectedGroup);
             bool showingHair = CharacterCustomizationUiConfig.IsHairGroup(selectedGroup);
-            bool showingMorphs = !showingPresets && !showingSkin && !showingHair;
+            bool showingTattoos = CharacterCustomizationUiConfig.IsTattooGroup(selectedGroup);
+            bool showingMorphs = !showingPresets && !showingSkin && !showingHair && !showingTattoos;
             if (hairPanel != null)
             {
                 hairPanel.SetActive(showingHair);
+            }
+
+            if (tattooPanel != null)
+            {
+                tattooPanel.SetActive(showingTattoos);
             }
             bool showingBody = string.Equals(selectedGroup, BodyGroupId, StringComparison.Ordinal);
             bool showingEyes = string.Equals(selectedGroup, EyeGroupId, StringComparison.Ordinal);
@@ -1406,6 +1431,10 @@ namespace Sol.CharacterCustomization
             else if (showingHair)
             {
                 resetGroupButtonLabel.text = "Reset Hair";
+            }
+            else if (showingTattoos)
+            {
+                resetGroupButtonLabel.text = "Clear Tattoos";
             }
             else
             {
@@ -1495,6 +1524,11 @@ namespace Sol.CharacterCustomization
             if (hairPicker != null && profile.Hair != null)
             {
                 hairPicker.Bind(profile.Hair);
+            }
+
+            if (tattooPicker != null && profile.Tattoos != null)
+            {
+                tattooPicker.Bind(profile.Tattoos);
             }
 
             if (skinParameterPicker != null)

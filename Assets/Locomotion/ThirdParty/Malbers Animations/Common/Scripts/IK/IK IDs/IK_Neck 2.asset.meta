@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 519aacbd946566f4a8359849bc058485
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Scripts/IK/IK IDs/IK_Neck 2.asset
+  uploadId: 1023146

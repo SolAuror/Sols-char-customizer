@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bb8064ee21219ba4b99f8db3e12df536
+timeCreated: 1489422308
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 148877
+  packageName: Animal Controller (Malbers Character Controller)
+  packageVersion: 1.5.3b
+  assetPath: Assets/Malbers Animations/Common/Prefabs/Weapons/Projectiles/Arrow.prefab
+  uploadId: 1023146
